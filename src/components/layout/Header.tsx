@@ -8,13 +8,13 @@ import { AlertCircle } from 'lucide-react';
 const Header = () => {
   const { signOut, supabase } = useAuth();
   
-  // Check if using demo Supabase URL
-  const isDemoMode = supabase.supabaseUrl.includes('placeholder.supabase.co');
+  // Check if using demo Supabase URL by checking the config from the AuthContext
+  const isDemoMode = supabase.getUrl() === 'https://placeholder.supabase.co';
 
   return (
     <header className="bg-white border-b flex flex-col sticky top-0 z-10">
       {isDemoMode && (
-        <Alert variant="warning" className="rounded-none border-y border-amber-200 py-1">
+        <Alert variant="destructive" className="rounded-none border-y border-amber-200 py-1 bg-amber-50 text-amber-800">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
             Usando modo demonstração. Para funcionalidades completas, conecte ao Supabase e configure as variáveis de ambiente.

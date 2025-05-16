@@ -1,10 +1,12 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import { User, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 type AuthContextType = {
   user: User | null;
-  supabase: SupabaseClient;
+  supabase: SupabaseClient<Database>;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -12,21 +14,10 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Fallback values for demonstration purposes when no real Supabase connection is available
-const DEMO_SUPABASE_URL = 'https://placeholder.supabase.co';
-const DEMO_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODM2NTQ1MzgsImV4cCI6MTk5OTIzMDUzOH0.placeholder';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Use environment variables or fallback to demo values
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEMO_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEMO_ANON_KEY;
-  
-  // Create client with fallback values to prevent initialization errors
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -48,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     getUser();
-  }, [supabase.auth]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
