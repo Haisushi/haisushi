@@ -19,7 +19,17 @@ export const useBusinessHours = () => {
         .order('weekday');
 
       if (error) throw error;
-      setBusinessHours(data || []);
+      
+      // Map the data to our BusinessHour type
+      const mappedData: BusinessHour[] = data.map(item => ({
+        id: item.id,
+        weekday: item.weekday,
+        open_time: item.open_time,
+        close_time: item.close_time,
+        is_open: item.is_open
+      }));
+      
+      setBusinessHours(mappedData);
     } catch (error) {
       console.error('Error fetching business hours:', error);
       toast({

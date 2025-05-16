@@ -1,8 +1,5 @@
 
 import { BusinessHour, dayNames } from '@/types/businessHours';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,23 +8,34 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Edit, Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
-interface BusinessHoursTableProps {
+type BusinessHoursTableProps = {
   businessHours: BusinessHour[];
   onEdit: (hour: BusinessHour) => void;
   onToggleStatus: (hour: BusinessHour) => void;
-}
+};
 
-const BusinessHoursTable = ({ 
-  businessHours, 
-  onEdit, 
-  onToggleStatus 
-}: BusinessHoursTableProps) => {
+const BusinessHoursTable = ({ businessHours, onEdit, onToggleStatus }: BusinessHoursTableProps) => {
+  const formatTime = (timeStr: string | null) => {
+    if (!timeStr) return '—';
+    
+    try {
+      // Convert "HH:MM:SS" to "HH:MM"
+      const [hours, minutes] = timeStr.split(':');
+      return `${hours}:${minutes}`;
+    } catch (e) {
+      return timeStr;
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Dia da Semana</TableHead>
+          <TableHead>Dia</TableHead>
           <TableHead>Horário de Abertura</TableHead>
           <TableHead>Horário de Fechamento</TableHead>
           <TableHead>Status</TableHead>
@@ -37,11 +45,12 @@ const BusinessHoursTable = ({
       <TableBody>
         {businessHours.map((hour) => (
           <TableRow key={hour.id}>
-            <TableCell className="font-medium">
+            <TableCell className="font-medium flex items-center">
+              <Calendar className="mr-2 h-4 w-4 text-restaurant-primary" />
               {dayNames[hour.weekday]}
             </TableCell>
-            <TableCell>{hour.open_time}</TableCell>
-            <TableCell>{hour.close_time}</TableCell>
+            <TableCell>{formatTime(hour.open_time)}</TableCell>
+            <TableCell>{formatTime(hour.close_time)}</TableCell>
             <TableCell>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -49,9 +58,11 @@ const BusinessHoursTable = ({
                   onCheckedChange={() => onToggleStatus(hour)}
                 />
                 <span
-                  className={`text-sm ${
-                    hour.is_open ? 'text-green-600' : 'text-red-600'
-                  }`}
+                  className={
+                    hour.is_open
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }
                 >
                   {hour.is_open ? 'Aberto' : 'Fechado'}
                 </span>

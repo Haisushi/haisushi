@@ -1,19 +1,13 @@
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { BusinessHour, BusinessHourFormValues, dayNames } from '@/types/businessHours';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Clock } from 'lucide-react';
+import { BusinessHour, dayNames } from '@/types/businessHours';
 import {
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -23,46 +17,88 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
-// Define the form schema
+// Define props type
+type BusinessHourFormProps = {
+  currentHour: BusinessHour | null;
+  onSubmitSuccess: () => void;
+};
+
+// Define form schema
 const businessHourFormSchema = z.object({
-  weekday: z.coerce.number().min(0).max(6),
+  weekday: z.number().int().min(0).max(6),
   open_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'Formato inválido. Use HH:MM (24h)',
+    message: 'Horário inválido. Use o formato HH:MM (24h).',
   }),
   close_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'Formato inválido. Use HH:MM (24h)',
+    message: 'Horário inválido. Use o formato HH:MM (24h).',
   }),
   is_open: z.boolean().default(true),
 });
 
-interface BusinessHourFormProps {
-  currentHour: BusinessHour | null;
-  onSubmitSuccess: () => void;
-}
+type BusinessHourFormValues = z.infer<typeof businessHourFormSchema>;
 
 const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProps) => {
   const { supabase } = useAuth();
   const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  const formatTimeForForm = (time: string) => {
+    if (!time) return '00:00';
+    // Extract HH:MM from HH:MM:SS
+    return time.substring(0, 5);
+  };
 
   const form = useForm<BusinessHourFormValues>({
     resolver: zodResolver(businessHourFormSchema),
-    defaultValues: {
-      weekday: currentHour?.weekday || 0,
-      open_time: currentHour?.open_time || '08:00',
-      close_time: currentHour?.close_time || '18:00',
-      is_open: currentHour?.is_open ?? true,
-    },
+    defaultValues: currentHour
+      ? {
+          weekday: currentHour.weekday,
+          open_time: formatTimeForForm(currentHour.open_time),
+          close_time: formatTimeForForm(currentHour.close_time),
+          is_open: currentHour.is_open,
+        }
+      : {
+          weekday: 0,
+          open_time: '08:00',
+          close_time: '18:00',
+          is_open: true,
+        },
   });
 
   const onSubmit = async (values: BusinessHourFormValues) => {
+    setSubmitting(true);
     try {
+      // Check if a business hour already exists for this weekday
+      if (!currentHour) {
+        const { data: existingData } = await supabase
+          .from('operating_hours')
+          .select('id')
+          .eq('weekday', values.weekday)
+          .maybeSingle();
+
+        if (existingData) {
+          toast({
+            title: 'Erro',
+            description: 'Já existe um horário definido para este dia da semana.',
+            variant: 'destructive',
+          });
+          setSubmitting(false);
+          return;
+        }
+      }
+
       if (currentHour) {
-        // Update existing hour
+        // Update existing business hour
         const { error } = await supabase
           .from('operating_hours')
           .update({
-            weekday: values.weekday,
             open_time: values.open_time,
             close_time: values.close_time,
             is_open: values.is_open,
@@ -73,40 +109,22 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
 
         toast({
           title: 'Horário atualizado',
-          description: 'O horário de funcionamento foi atualizado com sucesso.',
+          description: `Horário de ${dayNames[currentHour.weekday]} atualizado.`,
         });
       } else {
-        // Check if day already exists
-        const { data: existingData } = await supabase
-          .from('operating_hours')
-          .select('id')
-          .eq('weekday', values.weekday)
-          .single();
-
-        if (existingData) {
-          toast({
-            title: 'Erro',
-            description: 'Já existe um registro para este dia da semana.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        // Create new hour
-        const { error } = await supabase
-          .from('operating_hours')
-          .insert({
-            weekday: values.weekday,
-            open_time: values.open_time,
-            close_time: values.close_time,
-            is_open: values.is_open,
-          });
+        // Create new business hour
+        const { error } = await supabase.from('operating_hours').insert({
+          weekday: values.weekday,
+          open_time: values.open_time,
+          close_time: values.close_time,
+          is_open: values.is_open,
+        });
 
         if (error) throw error;
 
         toast({
-          title: 'Horário criado',
-          description: 'O horário de funcionamento foi criado com sucesso.',
+          title: 'Horário adicionado',
+          description: `Horário para ${dayNames[values.weekday]} adicionado.`,
         });
       }
 
@@ -118,6 +136,8 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
         description: 'Não foi possível salvar o horário de funcionamento.',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -125,40 +145,43 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
     <>
       <DialogHeader>
         <DialogTitle>
-          {currentHour
-            ? 'Editar Horário de Funcionamento'
-            : 'Adicionar Horário de Funcionamento'}
+          {currentHour ? 'Editar Horário' : 'Adicionar Horário'}
         </DialogTitle>
         <DialogDescription>
-          Defina o horário de funcionamento para um dia da semana.
+          {currentHour
+            ? `Editar horário de funcionamento para ${dayNames[currentHour.weekday]}.`
+            : 'Adicionar novo horário de funcionamento.'}
         </DialogDescription>
       </DialogHeader>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="weekday"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dia da Semana</FormLabel>
-                <FormControl>
-                  <select
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    {...field}
-                    disabled={!!currentHour}
-                  >
-                    {dayNames.map((day, index) => (
-                      <option key={day} value={index}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!currentHour && (
+            <FormField
+              control={form.control}
+              name="weekday"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia da Semana</FormLabel>
+                  <FormControl>
+                    <select
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      {...field}
+                      value={field.value}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    >
+                      {dayNames.map((day, index) => (
+                        <option key={index} value={index}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -168,14 +191,7 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
                 <FormItem>
                   <FormLabel>Horário de Abertura</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="08:00"
-                        className="pl-8"
-                        {...field}
-                      />
-                    </div>
+                    <Input type="time" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -189,14 +205,7 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
                 <FormItem>
                   <FormLabel>Horário de Fechamento</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="18:00"
-                        className="pl-8"
-                        {...field}
-                      />
-                    </div>
+                    <Input type="time" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -208,34 +217,25 @@ const BusinessHourForm = ({ currentHour, onSubmitSuccess }: BusinessHourFormProp
             control={form.control}
             name="is_open"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base">
-                    Status do Dia
-                  </FormLabel>
-                </div>
+              <FormItem className="flex flex-row items-center justify-between">
+                <FormLabel>Aberto</FormLabel>
                 <FormControl>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                    <span
-                      className={`text-sm ${
-                        field.value ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {field.value ? 'Aberto' : 'Fechado'}
-                    </span>
-                  </div>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
                 </FormControl>
               </FormItem>
             )}
           />
 
           <DialogFooter>
-            <Button type="submit" className="bg-restaurant-primary hover:bg-restaurant-primary/90">
-              {currentHour ? 'Salvar Alterações' : 'Adicionar Horário'}
+            <Button
+              type="submit"
+              className="bg-restaurant-primary hover:bg-restaurant-primary/90"
+              disabled={submitting}
+            >
+              {submitting ? 'Salvando...' : currentHour ? 'Salvar' : 'Adicionar'}
             </Button>
           </DialogFooter>
         </form>

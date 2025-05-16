@@ -42,26 +42,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-// Define the menu item type
-type MenuItem = {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  available: boolean;
-  embedding?: any;
-};
+import { MenuItem, MenuItemFormValues } from '@/types/MenuItem';
 
 // Define the form schema
 const menuItemFormSchema = z.object({
   name: z.string().min(3, { message: 'Nome precisa ter no mínimo 3 caracteres' }),
   description: z.string().min(5, { message: 'Descrição precisa ter no mínimo 5 caracteres' }),
   price: z.coerce.number().positive({ message: 'O preço deve ser um valor positivo' }),
-  available: z.boolean().default(true),
+  is_available: z.boolean().default(true),
 });
-
-type MenuItemFormValues = z.infer<typeof menuItemFormSchema>;
 
 const MenuItems = () => {
   const { supabase } = useAuth();
@@ -73,7 +62,7 @@ const MenuItems = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentMenuItem, setCurrentMenuItem] = useState<MenuItem | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const form = useForm<MenuItemFormValues>({
     resolver: zodResolver(menuItemFormSchema),
@@ -81,7 +70,7 @@ const MenuItems = () => {
       name: '',
       description: '',
       price: 0,
-      available: true,
+      is_available: true,
     },
   });
 
@@ -92,7 +81,7 @@ const MenuItems = () => {
       let query = supabase.from('menu_items').select('*');
 
       if (availabilityFilter !== null) {
-        query = query.eq('available', availabilityFilter);
+        query = query.eq('is_available', availabilityFilter);
       }
 
       if (searchTerm) {
@@ -131,7 +120,7 @@ const MenuItems = () => {
       name: item.name,
       description: item.description,
       price: item.price,
-      available: item.available,
+      is_available: item.is_available,
     });
     setIsDialogOpen(true);
   };
@@ -142,12 +131,12 @@ const MenuItems = () => {
       name: '',
       description: '',
       price: 0,
-      available: true,
+      is_available: true,
     });
     setIsDialogOpen(true);
   };
 
-  const confirmDelete = (id: number) => {
+  const confirmDelete = (id: string) => {
     setItemToDelete(id);
     setDeleteConfirmOpen(true);
   };
@@ -195,7 +184,7 @@ const MenuItems = () => {
             name: values.name,
             description: values.description,
             price: values.price,
-            available: values.available,
+            is_available: values.is_available,
             // If we had embeddings, we'd update them here
           })
           .eq('id', currentMenuItem.id);
@@ -212,7 +201,7 @@ const MenuItems = () => {
           name: values.name,
           description: values.description,
           price: values.price,
-          available: values.available,
+          is_available: values.is_available,
           embedding: mockEmbedding,
         });
 
@@ -315,12 +304,12 @@ const MenuItems = () => {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            item.available
+                            item.is_available
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {item.available ? 'Disponível' : 'Indisponível'}
+                          {item.is_available ? 'Disponível' : 'Indisponível'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
@@ -413,7 +402,7 @@ const MenuItems = () => {
 
               <FormField
                 control={form.control}
-                name="available"
+                name="is_available"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between">
                     <div className="space-y-0.5">

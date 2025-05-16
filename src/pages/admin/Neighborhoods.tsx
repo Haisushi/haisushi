@@ -38,13 +38,7 @@ import { Edit, MapPin, Plus, Trash2 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-
-// Define the neighborhood type
-type Neighborhood = {
-  id: number;
-  name: string;
-  delivery_fee: number;
-};
+import { Neighborhood, NeighborhoodFormValues } from '@/types/Neighborhood';
 
 // Define the form schema
 const neighborhoodFormSchema = z.object({
@@ -52,12 +46,10 @@ const neighborhoodFormSchema = z.object({
     .string()
     .min(3, { message: 'Nome precisa ter no mínimo 3 caracteres' })
     .transform(val => val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")),
-  delivery_fee: z.coerce
+  fee: z.coerce
     .number()
     .min(0, { message: 'A taxa de entrega não pode ser negativa' }),
 });
-
-type NeighborhoodFormValues = z.infer<typeof neighborhoodFormSchema>;
 
 const Neighborhoods = () => {
   const { supabase } = useAuth();
@@ -67,13 +59,13 @@ const Neighborhoods = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentNeighborhood, setCurrentNeighborhood] = useState<Neighborhood | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const form = useForm<NeighborhoodFormValues>({
     resolver: zodResolver(neighborhoodFormSchema),
     defaultValues: {
       name: '',
-      delivery_fee: 0,
+      fee: 0,
     },
   });
 
@@ -82,12 +74,20 @@ const Neighborhoods = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('neighborhoods')
+        .from('delivery_areas')
         .select('*')
-        .order('name');
+        .order('neighborhood');
 
       if (error) throw error;
-      setNeighborhoods(data || []);
+      
+      // Map the data to our Neighborhood type
+      const mappedData: Neighborhood[] = data.map(item => ({
+        id: item.id,
+        name: item.neighborhood,
+        fee: item.fee
+      }));
+      
+      setNeighborhoods(mappedData);
     } catch (error) {
       console.error('Error fetching neighborhoods:', error);
       toast({
@@ -108,7 +108,7 @@ const Neighborhoods = () => {
     setCurrentNeighborhood(neighborhood);
     form.reset({
       name: neighborhood.name,
-      delivery_fee: neighborhood.delivery_fee,
+      fee: neighborhood.fee,
     });
     setIsDialogOpen(true);
   };
@@ -117,12 +117,12 @@ const Neighborhoods = () => {
     setCurrentNeighborhood(null);
     form.reset({
       name: '',
-      delivery_fee: 0,
+      fee: 0,
     });
     setIsDialogOpen(true);
   };
 
-  const confirmDelete = (id: number) => {
+  const confirmDelete = (id: string) => {
     setItemToDelete(id);
     setDeleteConfirmOpen(true);
   };
@@ -132,7 +132,7 @@ const Neighborhoods = () => {
 
     try {
       const { error } = await supabase
-        .from('neighborhoods')
+        .from('delivery_areas')
         .delete()
         .eq('id', itemToDelete);
 
@@ -161,9 +161,9 @@ const Neighborhoods = () => {
       // Check if neighborhood already exists (but not the current one being edited)
       if (!currentNeighborhood) {
         const { data: existingData } = await supabase
-          .from('neighborhoods')
+          .from('delivery_areas')
           .select('id')
-          .eq('name', values.name)
+          .eq('neighborhood', values.name)
           .maybeSingle();
 
         if (existingData) {
@@ -179,10 +179,10 @@ const Neighborhoods = () => {
       if (currentNeighborhood) {
         // Update existing neighborhood
         const { error } = await supabase
-          .from('neighborhoods')
+          .from('delivery_areas')
           .update({
-            name: values.name,
-            delivery_fee: values.delivery_fee,
+            neighborhood: values.name,
+            fee: values.fee,
           })
           .eq('id', currentNeighborhood.id);
 
@@ -194,9 +194,9 @@ const Neighborhoods = () => {
         });
       } else {
         // Create new neighborhood
-        const { error } = await supabase.from('neighborhoods').insert({
-          name: values.name,
-          delivery_fee: values.delivery_fee,
+        const { error } = await supabase.from('delivery_areas').insert({
+          neighborhood: values.name,
+          fee: values.fee,
         });
 
         if (error) throw error;
@@ -261,7 +261,7 @@ const Neighborhoods = () => {
                       {neighborhood.name}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {neighborhood.delivery_fee.toFixed(2)}
+                      {neighborhood.fee.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
@@ -327,7 +327,7 @@ const Neighborhoods = () => {
 
               <FormField
                 control={form.control}
-                name="delivery_fee"
+                name="fee"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Taxa de Entrega (R$)</FormLabel>

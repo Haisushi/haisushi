@@ -41,17 +41,8 @@ import { Edit, FileText, Plus } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-
-// Define the order type
-type Order = {
-  id: number;
-  customer_name: string;
-  customer_phone: string;
-  items: any;
-  total: number;
-  status: 'pending' | 'confirmed' | 'delivered' | 'canceled';
-  created_at: string;
-};
+import { Order, OrderFormValues, statusBadge, statusLabel } from '@/types/Order';
+import { Json } from '@/integrations/supabase/types';
 
 // Define the form schema
 const orderFormSchema = z.object({
@@ -65,26 +56,9 @@ const orderFormSchema = z.object({
       return false;
     }
   }, { message: 'Formato JSON inválido. Deve ser um array de itens.' }),
-  total: z.coerce.number().positive({ message: 'O total deve ser um valor positivo' }),
+  total_amount: z.coerce.number().positive({ message: 'O total deve ser um valor positivo' }),
   status: z.enum(['pending', 'confirmed', 'delivered', 'canceled']),
 });
-
-type OrderFormValues = z.infer<typeof orderFormSchema>;
-
-// Status badge mapping
-const statusBadge = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  delivered: 'bg-green-100 text-green-800',
-  canceled: 'bg-red-100 text-red-800',
-};
-
-const statusLabel = {
-  pending: 'Pendente',
-  confirmed: 'Confirmado',
-  delivered: 'Entregue',
-  canceled: 'Cancelado',
-};
 
 const Orders = () => {
   const { supabase } = useAuth();
@@ -103,7 +77,7 @@ const Orders = () => {
       customer_name: '',
       customer_phone: '',
       items: '[]',
-      total: 0,
+      total_amount: 0,
       status: 'pending',
     },
   });
@@ -149,11 +123,11 @@ const Orders = () => {
     setCurrentOrder(order);
     setIsEditStatus(true);
     form.reset({
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
+      customer_name: order.customer_name || '',
+      customer_phone: order.customer_phone || '',
       items: JSON.stringify(order.items, null, 2),
-      total: order.total,
-      status: order.status,
+      total_amount: order.total_amount || 0,
+      status: order.status as any || 'pending',
     });
     setIsDialogOpen(true);
   };
@@ -165,7 +139,7 @@ const Orders = () => {
       customer_name: '',
       customer_phone: '',
       items: '[]',
-      total: 0,
+      total_amount: 0,
       status: 'pending',
     });
     setIsDialogOpen(true);
@@ -173,7 +147,7 @@ const Orders = () => {
 
   const onSubmit = async (values: OrderFormValues) => {
     try {
-      const itemsData = JSON.parse(values.items);
+      const itemsData = JSON.parse(values.items) as Json;
       
       if (currentOrder && isEditStatus) {
         // Update existing order status
@@ -196,7 +170,7 @@ const Orders = () => {
           customer_name: values.customer_name,
           customer_phone: values.customer_phone,
           items: itemsData,
-          total: values.total,
+          total_amount: values.total_amount,
           status: values.status,
         });
 
@@ -220,13 +194,14 @@ const Orders = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
     return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ptBR });
   };
 
   // Format the items display for the table
-  const formatItems = (items: any[]) => {
-    if (!items || !items.length) return 'Nenhum item';
+  const formatItems = (items: Json) => {
+    if (!items || !Array.isArray(items) || !items.length) return 'Nenhum item';
     
     return items.map((item: any) => {
       if (typeof item === 'object' && item.name) {
@@ -334,19 +309,19 @@ const Orders = () => {
                 <TableBody>
                   {orders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.customer_name}</TableCell>
-                      <TableCell>{order.customer_phone}</TableCell>
+                      <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
+                      <TableCell>{order.customer_phone || 'N/A'}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
                         {formatItems(order.items)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {order.total.toFixed(2)}
+                        {order.total_amount?.toFixed(2) || '0.00'}
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${statusBadge[order.status]}`}
+                          className={`px-2 py-1 rounded-full text-xs ${order.status ? statusBadge[order.status as keyof typeof statusBadge] : ''}`}
                         >
-                          {statusLabel[order.status]}
+                          {order.status ? statusLabel[order.status as keyof typeof statusLabel] : 'Desconhecido'}
                         </span>
                       </TableCell>
                       <TableCell>{formatDate(order.created_at)}</TableCell>
@@ -437,7 +412,7 @@ const Orders = () => {
 
                   <FormField
                     control={form.control}
-                    name="total"
+                    name="total_amount"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Valor Total (R$)</FormLabel>

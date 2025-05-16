@@ -29,7 +29,7 @@ const Dashboard = () => {
         const { count: menuItemsAvailable } = await supabase
           .from('menu_items')
           .select('*', { count: 'exact', head: true })
-          .eq('available', true);
+          .eq('is_available', true);
 
         // Pending orders
         const { count: pendingOrders } = await supabase
@@ -39,13 +39,13 @@ const Dashboard = () => {
 
         // Closed days in current month
         const { count: closedDays } = await supabase
-          .from('business_hours')
+          .from('operating_hours')
           .select('*', { count: 'exact', head: true })
           .eq('is_open', false);
 
         // Total neighborhoods
         const { count: neighborhoods } = await supabase
-          .from('neighborhoods')
+          .from('delivery_areas')
           .select('*', { count: 'exact', head: true });
 
         setStats({
