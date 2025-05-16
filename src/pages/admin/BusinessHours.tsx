@@ -40,12 +40,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-// Define the business hour type
+// Define the business hour type to match the database structure
 type BusinessHour = {
-  id: number;
-  day_of_week: number;
-  opening_time: string;
-  closing_time: string;
+  id: string;
+  weekday: number;
+  open_time: string;
+  close_time: string;
   is_open: boolean;
 };
 
@@ -62,11 +62,11 @@ const dayNames = [
 
 // Define the form schema
 const businessHourFormSchema = z.object({
-  day_of_week: z.coerce.number().min(0).max(6),
-  opening_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+  weekday: z.coerce.number().min(0).max(6),
+  open_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
     message: 'Formato inválido. Use HH:MM (24h)',
   }),
-  closing_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+  close_time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
     message: 'Formato inválido. Use HH:MM (24h)',
   }),
   is_open: z.boolean().default(true),
@@ -85,21 +85,21 @@ const BusinessHours = () => {
   const form = useForm<BusinessHourFormValues>({
     resolver: zodResolver(businessHourFormSchema),
     defaultValues: {
-      day_of_week: 0,
-      opening_time: '08:00',
-      closing_time: '18:00',
+      weekday: 0,
+      open_time: '08:00',
+      close_time: '18:00',
       is_open: true,
     },
   });
 
-  // Fetch business hours
+  // Fetch business hours from operating_hours table
   const fetchBusinessHours = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('business_hours')
+        .from('operating_hours')
         .select('*')
-        .order('day_of_week');
+        .order('weekday');
 
       if (error) throw error;
       setBusinessHours(data || []);
@@ -122,9 +122,9 @@ const BusinessHours = () => {
   const openEditDialog = (hour: BusinessHour) => {
     setCurrentHour(hour);
     form.reset({
-      day_of_week: hour.day_of_week,
-      opening_time: hour.opening_time,
-      closing_time: hour.closing_time,
+      weekday: hour.weekday,
+      open_time: hour.open_time,
+      close_time: hour.close_time,
       is_open: hour.is_open,
     });
     setIsDialogOpen(true);
@@ -133,9 +133,9 @@ const BusinessHours = () => {
   const openCreateDialog = () => {
     setCurrentHour(null);
     form.reset({
-      day_of_week: 0,
-      opening_time: '08:00',
-      closing_time: '18:00',
+      weekday: 0,
+      open_time: '08:00',
+      close_time: '18:00',
       is_open: true,
     });
     setIsDialogOpen(true);
@@ -146,11 +146,11 @@ const BusinessHours = () => {
       if (currentHour) {
         // Update existing hour
         const { error } = await supabase
-          .from('business_hours')
+          .from('operating_hours')
           .update({
-            day_of_week: values.day_of_week,
-            opening_time: values.opening_time,
-            closing_time: values.closing_time,
+            weekday: values.weekday,
+            open_time: values.open_time,
+            close_time: values.close_time,
             is_open: values.is_open,
           })
           .eq('id', currentHour.id);
@@ -164,9 +164,9 @@ const BusinessHours = () => {
       } else {
         // Check if day already exists
         const { data: existingData } = await supabase
-          .from('business_hours')
+          .from('operating_hours')
           .select('id')
-          .eq('day_of_week', values.day_of_week)
+          .eq('weekday', values.weekday)
           .single();
 
         if (existingData) {
@@ -179,10 +179,10 @@ const BusinessHours = () => {
         }
 
         // Create new hour
-        const { error } = await supabase.from('business_hours').insert({
-          day_of_week: values.day_of_week,
-          opening_time: values.opening_time,
-          closing_time: values.closing_time,
+        const { error } = await supabase.from('operating_hours').insert({
+          weekday: values.weekday,
+          open_time: values.open_time,
+          close_time: values.close_time,
           is_open: values.is_open,
         });
 
@@ -209,7 +209,7 @@ const BusinessHours = () => {
   const toggleOpenStatus = async (hour: BusinessHour) => {
     try {
       const { error } = await supabase
-        .from('business_hours')
+        .from('operating_hours')
         .update({ is_open: !hour.is_open })
         .eq('id', hour.id);
 
@@ -218,7 +218,7 @@ const BusinessHours = () => {
       fetchBusinessHours();
       toast({
         title: hour.is_open ? 'Dia fechado' : 'Dia aberto',
-        description: `${dayNames[hour.day_of_week]} ${
+        description: `${dayNames[hour.weekday]} ${
           hour.is_open ? 'marcado como fechado' : 'marcado como aberto'
         }.`,
       });
@@ -272,10 +272,10 @@ const BusinessHours = () => {
                 {businessHours.map((hour) => (
                   <TableRow key={hour.id}>
                     <TableCell className="font-medium">
-                      {dayNames[hour.day_of_week]}
+                      {dayNames[hour.weekday]}
                     </TableCell>
-                    <TableCell>{hour.opening_time}</TableCell>
-                    <TableCell>{hour.closing_time}</TableCell>
+                    <TableCell>{hour.open_time}</TableCell>
+                    <TableCell>{hour.close_time}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Switch
@@ -326,7 +326,7 @@ const BusinessHours = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
-                name="day_of_week"
+                name="weekday"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dia da Semana</FormLabel>
@@ -351,7 +351,7 @@ const BusinessHours = () => {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="opening_time"
+                  name="open_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Horário de Abertura</FormLabel>
@@ -372,7 +372,7 @@ const BusinessHours = () => {
 
                 <FormField
                   control={form.control}
-                  name="closing_time"
+                  name="close_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Horário de Fechamento</FormLabel>
