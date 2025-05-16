@@ -12,39 +12,60 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Fallback values for demonstration purposes when no real Supabase connection is available
+const DEMO_SUPABASE_URL = 'https://placeholder.supabase.co';
+const DEMO_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODM2NTQ1MzgsImV4cCI6MTk5OTIzMDUzOH0.placeholder';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
+  
+  // Use environment variables or fallback to demo values
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEMO_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEMO_ANON_KEY;
+  
+  // Create client with fallback values to prevent initialization errors
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      setLoading(false);
-      
-      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user || null);
-      });
-
-      return () => {
-        authListener.subscription.unsubscribe();
-      };
+        
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user || null);
+        });
+        
+        return () => {
+          authListener.subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Auth error:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getUser();
   }, [supabase.auth]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (error) {
+      console.error("SignIn error:", error);
+      return { error };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("SignOut error:", error);
+    }
   };
 
   return (
