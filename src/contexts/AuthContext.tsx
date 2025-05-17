@@ -21,24 +21,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // 1. Primeiro, configuramos o listener para mudanças de estado de autenticação
+    console.log('Inicializando o contexto de autenticação');
+    
+    // Primeiro configurar o listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      // Registramos o evento para depuração
       console.log('Auth state change:', event);
       
-      // Atualizamos os estados sem causar atualizações extras
-      if (currentSession?.user?.id !== user?.id || event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('Sessão atualizada:', currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+      } else if (event === 'SIGNED_OUT') {
+        console.log('Usuário desconectado');
+        setSession(null);
+        setUser(null);
       }
     });
     
-    // 2. Depois verificamos se já existe uma sessão ativa
+    // Depois verificar se já existe sessão
     const getInitialSession = async () => {
       try {
+        console.log('Verificando sessão inicial');
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
+        
+        if (initialSession) {
+          console.log('Sessão inicial encontrada:', initialSession.user?.email);
+          setSession(initialSession);
+          setUser(initialSession.user);
+        } else {
+          console.log('Nenhuma sessão inicial encontrada');
+        }
       } catch (error) {
         console.error("Erro ao obter sessão inicial:", error);
       } finally {
@@ -48,15 +60,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     getInitialSession();
     
-    // Limpeza do listener quando o componente é desmontado
     return () => {
+      console.log('Limpando listener de autenticação');
       subscription.unsubscribe();
     };
-  }, []); // Array de dependências vazio garante que o efeito só é executado uma vez
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Tentando fazer login:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (data.session) {
+        console.log('Login bem-sucedido:', data.user?.email);
+      }
+      
       return { error };
     } catch (error) {
       console.error("SignIn error:", error);
@@ -66,14 +84,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      console.log('Tentando fazer logout');
       await supabase.auth.signOut();
+      console.log('Logout bem-sucedido');
     } catch (error) {
       console.error("SignOut error:", error);
     }
   };
 
+  const value = {
+    user,
+    session,
+    supabase,
+    loading,
+    signIn,
+    signOut
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, supabase, loading, signIn, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

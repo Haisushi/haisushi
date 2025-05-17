@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/components/ui/use-toast";
@@ -16,12 +16,18 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log("Login: Verificando autenticação", { user });
+  }, [user]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      console.log("Tentando login com:", email);
       const { error } = await signIn(email, password);
+      
       if (error) {
         console.error("Login error details:", error);
         toast({
@@ -31,7 +37,7 @@ const Login = () => {
         });
       } else {
         console.log("Login bem-sucedido, navegando para /admin");
-        // Usando replace: true para substituir a entrada de histórico e evitar voltar para o login
+        // Importante: usar replace: true para substituir a entrada de histórico
         navigate("/admin", { replace: true });
       }
     } catch (error) {
@@ -48,7 +54,7 @@ const Login = () => {
 
   // Se o usuário já estiver autenticado, redireciona para o admin
   if (user) {
-    console.log("Usuário já autenticado, redirecionando para /admin");
+    console.log("Login: Usuário já autenticado, redirecionando para /admin");
     return <Navigate to="/admin" replace />;
   }
 

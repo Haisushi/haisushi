@@ -1,12 +1,17 @@
 
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const AdminLayout = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("AdminLayout: Verificando autenticação", { user, loading });
+  }, [user, loading]);
 
   if (loading) {
     return (
@@ -17,11 +22,11 @@ const AdminLayout = () => {
   }
 
   if (!user) {
-    console.log("Usuário não autenticado, redirecionando para /login");
+    console.log("AdminLayout: Usuário não autenticado, redirecionando para /login");
     return <Navigate to="/login" replace />;
   }
 
-  console.log("Renderizando layout administrativo para usuário autenticado");
+  console.log("AdminLayout: Renderizando layout administrativo para usuário autenticado");
   return (
     <div className="flex min-h-screen">
       <Sidebar />
