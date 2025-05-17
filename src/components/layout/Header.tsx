@@ -5,13 +5,16 @@ import { LogOut } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+// Import hardcoded Supabase URL to compare against for demo mode detection
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
+
 const Header = () => {
   const { signOut, supabase } = useAuth();
   
-  // Check if using demo Supabase URL by examining the configuration
-  // We use the URL from the client configuration which is publicly accessible
-  const isDemoMode = supabase?.restUrl?.includes('placeholder.supabase.co') || 
-                   supabase?.restUrl?.includes('eflkehzzvaumatnapmrm.supabase.co');
+  // Check if using demo Supabase URL by comparing with the hardcoded value
+  // This is a safe approach since the URL is already publicly in the client file
+  const isDemoMode = supabaseClient.url.includes('placeholder.supabase.co') || 
+                   supabaseClient.url.includes('eflkehzzvaumatnapmrm.supabase.co');
 
   return (
     <header className="bg-white border-b flex flex-col sticky top-0 z-10">
