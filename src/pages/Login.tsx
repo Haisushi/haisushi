@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { user, signIn } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +28,9 @@ const Login = () => {
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        // Login bem-sucedido, navegar programaticamente
+        navigate("/admin", { replace: true });
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -41,7 +45,7 @@ const Login = () => {
   };
 
   if (user) {
-    return <Navigate to="/admin" />;
+    return <Navigate to="/admin" replace />;
   }
 
   return (
