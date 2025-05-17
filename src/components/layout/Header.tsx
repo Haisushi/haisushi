@@ -8,10 +8,10 @@ import { AlertCircle } from 'lucide-react';
 const Header = () => {
   const { signOut, supabase } = useAuth();
   
-  // Check if using demo Supabase URL
-  // We'll use the config property which contains the URL and is publicly accessible
-  const isDemoMode = supabase?.getClientConfig().uri?.includes('placeholder.supabase.co') || 
-                   supabase?.getClientConfig().uri?.includes('eflkehzzvaumatnapmrm.supabase.co');
+  // Check if using demo Supabase URL by examining the configuration
+  // We use the URL from the client configuration which is publicly accessible
+  const isDemoMode = supabase?.restUrl?.includes('placeholder.supabase.co') || 
+                   supabase?.restUrl?.includes('eflkehzzvaumatnapmrm.supabase.co');
 
   return (
     <header className="bg-white border-b flex flex-col sticky top-0 z-10">
