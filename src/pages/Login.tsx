@@ -23,13 +23,15 @@ const Login = () => {
     try {
       const { error } = await signIn(email, password);
       if (error) {
+        console.error("Login error details:", error);
         toast({
           title: "Erro ao fazer login",
-          description: error.message,
+          description: error.message || "Ocorreu um erro ao tentar fazer login.",
           variant: "destructive",
         });
       } else {
-        // Login bem-sucedido, navegar programaticamente
+        console.log("Login bem-sucedido, navegando para /admin");
+        // Usando replace: true para substituir a entrada de histórico e evitar voltar para o login
         navigate("/admin", { replace: true });
       }
     } catch (error) {
@@ -44,7 +46,9 @@ const Login = () => {
     }
   };
 
+  // Se o usuário já estiver autenticado, redireciona para o admin
   if (user) {
+    console.log("Usuário já autenticado, redirecionando para /admin");
     return <Navigate to="/admin" replace />;
   }
 

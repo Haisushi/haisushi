@@ -20,13 +20,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Esta função é executada uma única vez quando o componente é montado
   useEffect(() => {
     // 1. Primeiro, configuramos o listener para mudanças de estado de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      // Registramos o evento para depuração
+      console.log('Auth state change:', event);
+      
       // Atualizamos os estados sem causar atualizações extras
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      if (currentSession?.user?.id !== user?.id || event === 'SIGNED_OUT') {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      }
     });
     
     // 2. Depois verificamos se já existe uma sessão ativa

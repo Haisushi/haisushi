@@ -17,9 +17,11 @@ const AdminLayout = () => {
   }
 
   if (!user) {
+    console.log("Usuário não autenticado, redirecionando para /login");
     return <Navigate to="/login" replace />;
   }
 
+  console.log("Renderizando layout administrativo para usuário autenticado");
   return (
     <div className="flex min-h-screen">
       <Sidebar />
