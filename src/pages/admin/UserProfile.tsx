@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -78,49 +77,32 @@ const UserProfile = () => {
   });
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!user) return;
-
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-        } else if (data) {
-          setUserName(data.name || '');
-          profileForm.setValue('name', data.name || '');
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      } finally {
-        setLoading(false);
+    // Set form values from user data
+    if (user) {
+      profileForm.setValue('email', user.email || '');
+      
+      // If user metadata has a name, use it
+      if (user.user_metadata && user.user_metadata.name) {
+        setUserName(user.user_metadata.name || '');
+        profileForm.setValue('name', user.user_metadata.name || '');
       }
-    };
-
-    fetchUserProfile();
-  }, [user, supabase, profileForm]);
+    }
+  }, [user, profileForm]);
 
   const onUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
 
     setLoading(true);
     try {
-      // Update profile table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
+      // Update user metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
           name: values.name,
-          updated_at: new Date().toISOString(),
-        });
+        }
+      });
 
-      if (profileError) throw profileError;
-
+      if (authError) throw authError;
+      
       // Update display name
       setUserName(values.name || '');
 

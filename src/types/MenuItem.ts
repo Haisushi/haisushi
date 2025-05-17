@@ -2,9 +2,9 @@
 export type MenuItem = {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
-  is_available: boolean;
+  is_available: boolean | null;
   embedding?: any;
 };
 

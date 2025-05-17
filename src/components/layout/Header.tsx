@@ -9,8 +9,8 @@ const Header = () => {
   const { signOut, supabase } = useAuth();
   
   // Check if using demo Supabase URL
-  const isDemoMode = supabase?.restUrl?.includes('placeholder.supabase.co') || 
-                   supabase?.restUrl?.includes('eflkehzzvaumatnapmrm.supabase.co');
+  const isDemoMode = supabase?.supabaseUrl?.includes('placeholder.supabase.co') || 
+                   supabase?.supabaseUrl?.includes('eflkehzzvaumatnapmrm.supabase.co');
 
   return (
     <header className="bg-white border-b flex flex-col sticky top-0 z-10">

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -172,9 +171,8 @@ const MenuItems = () => {
 
   const onSubmit = async (values: MenuItemFormValues) => {
     try {
-      // Generate a simple embedding for the search
-      // In a real app, you'd call an API to generate this
-      const mockEmbedding = Array(3).fill(0).map(() => Math.random());
+      // For embedded type as a string - using a JSON string representation
+      const mockEmbedding = JSON.stringify(Array(3).fill(0).map(() => Math.random()));
       
       if (currentMenuItem) {
         // Update existing item
@@ -202,7 +200,7 @@ const MenuItems = () => {
           description: values.description,
           price: values.price,
           is_available: values.is_available,
-          embedding: mockEmbedding,
+          embedding: mockEmbedding,  // Store embedding as a string
         });
 
         if (error) throw error;
