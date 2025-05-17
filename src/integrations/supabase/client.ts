@@ -11,5 +11,5 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Export the URL as well to make it accessible
-supabase.url = SUPABASE_URL;
+// Export the URL as a separate constant for reference
+export const SUPABASE_BASE_URL = SUPABASE_URL;
