@@ -37,7 +37,7 @@ const Login = () => {
         });
       } else {
         console.log("Login bem-sucedido, navegando para /admin");
-        // Importante: usar replace: true para substituir a entrada de histórico
+        // Important: Use replace: true to prevent history issues
         navigate("/admin", { replace: true });
       }
     } catch (error) {
@@ -52,7 +52,7 @@ const Login = () => {
     }
   };
 
-  // Se o usuário já estiver autenticado, redireciona para o admin
+  // If the user is already authenticated, redirect to the admin
   if (user) {
     console.log("Login: Usuário já autenticado, redirecionando para /admin");
     return <Navigate to="/admin" replace />;

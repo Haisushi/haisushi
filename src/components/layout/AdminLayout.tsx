@@ -1,13 +1,12 @@
 
 import React, { useEffect } from 'react';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const AdminLayout = () => {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     console.log("AdminLayout: Verificando autenticação", { user, loading });
@@ -23,6 +22,7 @@ const AdminLayout = () => {
 
   if (!user) {
     console.log("AdminLayout: Usuário não autenticado, redirecionando para /login");
+    // Use replace: true to avoid history issues
     return <Navigate to="/login" replace />;
   }
 

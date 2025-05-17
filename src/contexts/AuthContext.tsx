@@ -23,22 +23,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('Inicializando o contexto de autenticação');
     
-    // Primeiro configurar o listener para mudanças de autenticação
+    // First set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       console.log('Auth state change:', event);
       
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (currentSession) {
         console.log('Sessão atualizada:', currentSession?.user?.email);
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('Usuário desconectado');
+        setUser(currentSession.user);
+      } else {
+        console.log('Sem sessão');
         setSession(null);
         setUser(null);
       }
     });
     
-    // Depois verificar se já existe sessão
+    // Then check for existing session
     const getInitialSession = async () => {
       try {
         console.log('Verificando sessão inicial');
@@ -71,7 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Tentando fazer login:', email);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
-      if (data.session) {
+      if (error) {
+        console.error("Erro no login:", error.message);
+      } else if (data.session) {
         console.log('Login bem-sucedido:', data.user?.email);
       }
       
