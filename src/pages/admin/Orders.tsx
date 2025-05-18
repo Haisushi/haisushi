@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -487,12 +486,13 @@ const Orders = () => {
                               placeholder="0.00"
                               {...field}
                               onChange={(e) => {
-                                field.onChange(e);
+                                field.onChange(parseFloat(e.target.value) || 0);
                                 // Calculate total when order amount changes
                                 const orderAmount = parseFloat(e.target.value) || 0;
-                                const deliveryFee = parseFloat(form.getValues('delivery_fee')) || 0;
+                                const deliveryFee = parseFloat(form.getValues('delivery_fee').toString()) || 0;
                                 form.setValue('total_amount', orderAmount + deliveryFee);
                               }}
+                              value={field.value.toString()}
                             />
                           </FormControl>
                           <FormMessage />
@@ -514,12 +514,13 @@ const Orders = () => {
                               placeholder="0.00"
                               {...field}
                               onChange={(e) => {
-                                field.onChange(e);
+                                field.onChange(parseFloat(e.target.value) || 0);
                                 // Calculate total when delivery fee changes
-                                const orderAmount = parseFloat(form.getValues('order_amount')) || 0;
+                                const orderAmount = parseFloat(form.getValues('order_amount').toString()) || 0;
                                 const deliveryFee = parseFloat(e.target.value) || 0;
                                 form.setValue('total_amount', orderAmount + deliveryFee);
                               }}
+                              value={field.value.toString()}
                             />
                           </FormControl>
                           <FormMessage />
@@ -541,6 +542,7 @@ const Orders = () => {
                               placeholder="0.00"
                               {...field}
                               className="font-bold"
+                              value={field.value.toString()}
                             />
                           </FormControl>
                           <FormMessage />
