@@ -123,6 +123,7 @@ export type Database = {
           delivery_fee: number | null
           id: string
           items: Json
+          order_amount: number | null
           status: string | null
           total_amount: number | null
         }
@@ -135,6 +136,7 @@ export type Database = {
           delivery_fee?: number | null
           id?: string
           items: Json
+          order_amount?: number | null
           status?: string | null
           total_amount?: number | null
         }
@@ -147,6 +149,7 @@ export type Database = {
           delivery_fee?: number | null
           id?: string
           items?: Json
+          order_amount?: number | null
           status?: string | null
           total_amount?: number | null
         }

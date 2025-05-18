@@ -6,15 +6,21 @@ export type Order = {
   customer_name: string | null;
   customer_phone: string | null;
   items: Json;
+  order_amount: number | null;
+  delivery_fee: number | null;
   total_amount: number | null;
   status: string | null;
   created_at: string | null;
+  delivery_address?: string | null;
+  bairro?: string | null;
 };
 
 export type OrderFormValues = {
   customer_name: string;
   customer_phone: string;
   items: string; // JSON string
+  order_amount: number;
+  delivery_fee: number;
   total_amount: number;
   status: string;
 };

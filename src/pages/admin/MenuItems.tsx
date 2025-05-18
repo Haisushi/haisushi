@@ -43,6 +43,8 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MenuItem, MenuItemFormValues, MenuCategory } from '@/types/MenuItem';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CategoryManager } from '@/components/admin/CategoryManager';
 
 // Define the form schema
 const menuItemFormSchema = z.object({
@@ -360,154 +362,167 @@ const MenuItems = () => {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou descrição..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="pl-8"
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || null)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Todas categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                variant={availabilityFilter === null ? "default" : "outline"}
-                onClick={() => setAvailabilityFilter(null)}
-              >
-                Todos
-              </Button>
-              <Button
-                variant={availabilityFilter === true ? "default" : "outline"}
-                onClick={() => setAvailabilityFilter(true)}
-              >
-                Disponíveis
-              </Button>
-              <Button
-                variant={availabilityFilter === false ? "default" : "outline"}
-                onClick={() => setAvailabilityFilter(false)}
-              >
-                Indisponíveis
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="items">
+        <TabsList className="mb-4">
+          <TabsTrigger value="items">Itens</TabsTrigger>
+          <TabsTrigger value="categories">Categorias</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="items">
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou descrição..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || null)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Todas categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas categorias</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={availabilityFilter === null ? "default" : "outline"}
+                    onClick={() => setAvailabilityFilter(null)}
+                  >
+                    Todos
+                  </Button>
+                  <Button
+                    variant={availabilityFilter === true ? "default" : "outline"}
+                    onClick={() => setAvailabilityFilter(true)}
+                  >
+                    Disponíveis
+                  </Button>
+                  <Button
+                    variant={availabilityFilter === false ? "default" : "outline"}
+                    onClick={() => setAvailabilityFilter(false)}
+                  >
+                    Indisponíveis
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardContent className="pt-6">
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-restaurant-primary"></div>
-            </div>
-          ) : menuItems.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-muted-foreground">Nenhum item encontrado</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ordem</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Preço</TableHead>
-                    <TableHead>Disponibilidade</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {menuItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="flex flex-col items-center gap-1">
-                          <span>{item.display_order}</span>
-                          <div className="flex gap-1">
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-restaurant-primary"></div>
+                </div>
+              ) : menuItems.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-muted-foreground">Nenhum item encontrado</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ordem</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="text-right">Preço</TableHead>
+                        <TableHead>Disponibilidade</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {menuItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div className="flex flex-col items-center gap-1">
+                              <span>{item.display_order}</span>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => moveItemInOrder(item, 'up')}
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => moveItemInOrder(item, 'down')}
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
+                          <TableCell>{getCategoryName(item.category_id)}</TableCell>
+                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant={item.is_available ? "outline" : "destructive"} 
+                              size="sm"
+                              onClick={() => toggleAvailability(item)}
+                              className="flex items-center gap-1"
+                            >
+                              {item.is_available ? (
+                                <><Check className="h-4 w-4" /> Disponível</>
+                              ) : (
+                                <><X className="h-4 w-4" /> Indisponível</>
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
-                              onClick={() => moveItemInOrder(item, 'up')}
+                              onClick={() => openEditDialog(item)}
                             >
-                              <ArrowUp className="h-3 w-3" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
-                              onClick={() => moveItemInOrder(item, 'down')}
+                              onClick={() => confirmDelete(item.id)}
+                              className="text-red-500 hover:text-red-700"
                             >
-                              <ArrowDown className="h-3 w-3" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
-                      <TableCell>{getCategoryName(item.category_id)}</TableCell>
-                      <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant={item.is_available ? "outline" : "destructive"} 
-                          size="sm"
-                          onClick={() => toggleAvailability(item)}
-                          className="flex items-center gap-1"
-                        >
-                          {item.is_available ? (
-                            <><Check className="h-4 w-4" /> Disponível</>
-                          ) : (
-                            <><X className="h-4 w-4" /> Indisponível</>
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => confirmDelete(item.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="categories">
+          <CategoryManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Menu Item Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

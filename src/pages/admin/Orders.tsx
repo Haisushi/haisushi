@@ -37,12 +37,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, FileText, Plus } from 'lucide-react';
+import { Edit, FileText, Plus, Printer } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Order, OrderFormValues, statusBadge, statusLabel } from '@/types/Order';
 import { Json } from '@/integrations/supabase/types';
+import { OrderPrintView } from '@/components/admin/OrderPrintView';
 
 // Define the form schema
 const orderFormSchema = z.object({
@@ -56,6 +57,8 @@ const orderFormSchema = z.object({
       return false;
     }
   }, { message: 'Formato JSON inválido. Deve ser um array de itens.' }),
+  order_amount: z.coerce.number().positive({ message: 'O subtotal deve ser um valor positivo' }),
+  delivery_fee: z.coerce.number().nonnegative({ message: 'A taxa de entrega não pode ser negativa' }),
   total_amount: z.coerce.number().positive({ message: 'O total deve ser um valor positivo' }),
   status: z.enum(['pending', 'confirmed', 'delivered', 'canceled']),
 });
@@ -70,6 +73,7 @@ const Orders = () => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -77,6 +81,8 @@ const Orders = () => {
       customer_name: '',
       customer_phone: '',
       items: '[]',
+      order_amount: 0,
+      delivery_fee: 0,
       total_amount: 0,
       status: 'pending',
     },
@@ -126,10 +132,17 @@ const Orders = () => {
       customer_name: order.customer_name || '',
       customer_phone: order.customer_phone || '',
       items: JSON.stringify(order.items, null, 2),
+      order_amount: order.order_amount || 0,
+      delivery_fee: order.delivery_fee || 0,
       total_amount: order.total_amount || 0,
       status: order.status as any || 'pending',
     });
     setIsDialogOpen(true);
+  };
+
+  const openPrintView = (order: Order) => {
+    setCurrentOrder(order);
+    setIsPrintViewOpen(true);
   };
 
   const openCreateDialog = () => {
@@ -139,6 +152,8 @@ const Orders = () => {
       customer_name: '',
       customer_phone: '',
       items: '[]',
+      order_amount: 0,
+      delivery_fee: 0,
       total_amount: 0,
       status: 'pending',
     });
@@ -170,6 +185,8 @@ const Orders = () => {
           customer_name: values.customer_name,
           customer_phone: values.customer_phone,
           items: itemsData,
+          order_amount: values.order_amount,
+          delivery_fee: values.delivery_fee,
           total_amount: values.total_amount,
           status: values.status,
         });
@@ -199,17 +216,42 @@ const Orders = () => {
     return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ptBR });
   };
 
-  // Format the items display for the table
+  // Updated formatting function to properly handle different item structures
   const formatItems = (items: Json) => {
-    if (!items || !Array.isArray(items) || !items.length) return 'Nenhum item';
+    if (!items) return 'Nenhum item';
     
-    return items.map((item: any) => {
-      if (typeof item === 'object' && item.name) {
-        const quantity = item.quantity || 1;
-        return `${quantity}x ${item.name}`;
-      }
-      return String(item);
-    }).join(', ');
+    try {
+      // Handle string or object
+      const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
+      
+      if (!Array.isArray(parsedItems) || !parsedItems.length) return 'Nenhum item';
+      
+      return parsedItems.map((item: any) => {
+        if (typeof item === 'object' && item !== null) {
+          const quantity = item.quantity || 1;
+          const name = item.name || 'Item sem nome';
+          return `${quantity}x ${name}`;
+        }
+        return String(item);
+      }).join(', ');
+    } catch (e) {
+      console.error("Error formatting items:", e);
+      return 'Erro ao mostrar itens';
+    }
+  };
+  
+  // Calculate totals
+  const calculateTotal = (order: Order) => {
+    let orderAmount = order.order_amount || 0;
+    let deliveryFee = order.delivery_fee || 0;
+    let total = order.total_amount || 0;
+    
+    // If order_amount is not set but total_amount is, use total as fallback
+    if (orderAmount === 0 && total > 0) {
+      orderAmount = total;
+    }
+    
+    return { orderAmount, deliveryFee, total };
   };
 
   return (
@@ -300,6 +342,8 @@ const Orders = () => {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Itens</TableHead>
+                    <TableHead className="text-right">Subtotal (R$)</TableHead>
+                    <TableHead className="text-right">Taxa (R$)</TableHead>
                     <TableHead className="text-right">Total (R$)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data/Hora</TableHead>
@@ -307,35 +351,53 @@ const Orders = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
-                      <TableCell>{order.customer_phone || 'N/A'}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {formatItems(order.items)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {order.total_amount?.toFixed(2) || '0.00'}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${order.status ? statusBadge[order.status as keyof typeof statusBadge] : ''}`}
-                        >
-                          {order.status ? statusLabel[order.status as keyof typeof statusLabel] : 'Desconhecido'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{formatDate(order.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditStatusDialog(order)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {orders.map((order) => {
+                    const { orderAmount, deliveryFee, total } = calculateTotal(order);
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
+                        <TableCell>{order.customer_phone || 'N/A'}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {formatItems(order.items)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {orderAmount.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {deliveryFee.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {total.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${order.status ? statusBadge[order.status as keyof typeof statusBadge] : ''}`}
+                          >
+                            {order.status ? statusLabel[order.status as keyof typeof statusLabel] : 'Desconhecido'}
+                          </span>
+                        </TableCell>
+                        <TableCell>{formatDate(order.created_at)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditStatusDialog(order)}
+                            title="Editar Status"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openPrintView(order)}
+                            title="Imprimir Pedido"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -410,25 +472,82 @@ const Orders = () => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="total_amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor Total (R$)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="order_amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor do Pedido (R$)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Calculate total when order amount changes
+                                const orderAmount = parseFloat(e.target.value) || 0;
+                                const deliveryFee = parseFloat(form.getValues('delivery_fee')) || 0;
+                                form.setValue('total_amount', orderAmount + deliveryFee);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="delivery_fee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Calculate total when delivery fee changes
+                                const orderAmount = parseFloat(form.getValues('order_amount')) || 0;
+                                const deliveryFee = parseFloat(e.target.value) || 0;
+                                form.setValue('total_amount', orderAmount + deliveryFee);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="total_amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Total (R$)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              {...field}
+                              className="font-bold"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </>
               )}
 
@@ -463,6 +582,13 @@ const Orders = () => {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Order Print View */}
+      <OrderPrintView 
+        order={currentOrder} 
+        open={isPrintViewOpen} 
+        onOpenChange={setIsPrintViewOpen}
+      />
     </div>
   );
 };
