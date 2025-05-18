@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -378,12 +377,12 @@ const MenuItems = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Select value={categoryFilter || ''} onValueChange={(value) => setCategoryFilter(value || null)}>
+            <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || null)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Todas categorias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas categorias</SelectItem>
+                <SelectItem value="all">Todas categorias</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
@@ -580,7 +579,7 @@ const MenuItems = () => {
                     <FormLabel>Categoria</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value || ""}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -588,7 +587,7 @@ const MenuItems = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Sem categoria</SelectItem>
+                        <SelectItem value="null">Sem categoria</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                         ))}
