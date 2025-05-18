@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -36,13 +37,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, FileText, Plus, Printer } from 'lucide-react';
+import { Edit, FileText, Plus, Printer, Calendar as CalendarIcon } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Order, OrderFormValues, statusBadge, statusLabel } from '@/types/Order';
 import { Json } from '@/integrations/supabase/types';
 import { OrderPrintView } from '@/components/admin/OrderPrintView';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 // Define the form schema
 const orderFormSchema = z.object({
@@ -60,6 +64,7 @@ const orderFormSchema = z.object({
   delivery_fee: z.coerce.number().nonnegative({ message: 'A taxa de entrega não pode ser negativa' }),
   total_amount: z.coerce.number().positive({ message: 'O total deve ser um valor positivo' }),
   status: z.enum(['pending', 'confirmed', 'delivered', 'canceled']),
+  scheduled_date: z.string().optional(),
 });
 
 const Orders = () => {
@@ -73,6 +78,7 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<string>('');
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -84,6 +90,7 @@ const Orders = () => {
       delivery_fee: 0,
       total_amount: 0,
       status: 'pending',
+      scheduled_date: '',
     },
   });
 
@@ -91,7 +98,8 @@ const Orders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('orders').select('*');
+      let query = supabase.from('orders').select('*')
+        .is('scheduled_date', null); // Only show unscheduled orders
 
       if (statusFilter) {
         query = query.eq('status', statusFilter);
@@ -135,8 +143,11 @@ const Orders = () => {
       delivery_fee: order.delivery_fee || 0,
       total_amount: order.total_amount || 0,
       status: order.status as any || 'pending',
+      scheduled_date: order.scheduled_date || '',
     });
     setIsDialogOpen(true);
+    // Also reset the date picker state
+    setSelectedDate(order.scheduled_date ? new Date(order.scheduled_date) : null);
   };
 
   const openPrintView = (order: Order) => {
@@ -155,7 +166,9 @@ const Orders = () => {
       delivery_fee: 0,
       total_amount: 0,
       status: 'pending',
+      scheduled_date: '',
     });
+    setSelectedDate(null);
     setIsDialogOpen(true);
   };
 
@@ -164,23 +177,32 @@ const Orders = () => {
       const itemsData = JSON.parse(values.items) as Json;
       
       if (currentOrder && isEditStatus) {
-        // Update existing order status
+        // Update existing order status and scheduled_date
+        const updates: any = {
+          status: values.status,
+        };
+        
+        // Only add scheduled_date if it was selected
+        if (selectedDate) {
+          updates.scheduled_date = format(selectedDate, 'yyyy-MM-dd');
+        } else {
+          updates.scheduled_date = null;
+        }
+        
         const { error } = await supabase
           .from('orders')
-          .update({
-            status: values.status,
-          })
+          .update(updates)
           .eq('id', currentOrder.id);
 
         if (error) throw error;
 
         toast({
           title: 'Pedido atualizado',
-          description: 'O status do pedido foi atualizado com sucesso.',
+          description: 'O pedido foi atualizado com sucesso.',
         });
       } else {
         // Create new order for testing
-        const { error } = await supabase.from('orders').insert({
+        const newOrder: any = {
           customer_name: values.customer_name,
           customer_phone: values.customer_phone,
           items: itemsData,
@@ -188,7 +210,14 @@ const Orders = () => {
           delivery_fee: values.delivery_fee,
           total_amount: values.total_amount,
           status: values.status,
-        });
+        };
+        
+        // Add scheduled_date if selected
+        if (selectedDate) {
+          newOrder.scheduled_date = format(selectedDate, 'yyyy-MM-dd');
+        }
+        
+        const { error } = await supabase.from('orders').insert(newOrder);
 
         if (error) throw error;
 
@@ -410,12 +439,12 @@ const Orders = () => {
           <DialogHeader>
             <DialogTitle>
               {isEditStatus
-                ? 'Atualizar Status do Pedido'
+                ? 'Atualizar Pedido'
                 : 'Criar Pedido de Teste'}
             </DialogTitle>
             <DialogDescription>
               {isEditStatus
-                ? 'Atualize o status do pedido selecionado.'
+                ? 'Atualize o status do pedido ou agende-o para uma data futura.'
                 : 'Crie um pedido de teste para fins de desenvolvimento.'}
             </DialogDescription>
           </DialogHeader>
@@ -553,6 +582,45 @@ const Orders = () => {
                 </>
               )}
 
+              {/* Date picker for scheduling */}
+              <FormItem className="flex flex-col">
+                <FormLabel>Data de Agendamento (opcional)</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate || undefined}
+                      onSelect={setSelectedDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {selectedDate && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-fit"
+                    onClick={() => setSelectedDate(null)}
+                  >
+                    Remover data
+                  </Button>
+                )}
+              </FormItem>
+
               <FormField
                 control={form.control}
                 name="status"
@@ -577,7 +645,7 @@ const Orders = () => {
 
               <DialogFooter>
                 <Button type="submit" className="bg-restaurant-primary hover:bg-restaurant-primary/90">
-                  {isEditStatus ? 'Atualizar Status' : 'Criar Pedido'}
+                  {isEditStatus ? 'Atualizar Pedido' : 'Criar Pedido'}
                 </Button>
               </DialogFooter>
             </form>

@@ -124,6 +124,7 @@ export type Database = {
           id: string
           items: Json
           order_amount: number | null
+          scheduled_date: string | null
           status: string | null
           total_amount: number | null
         }
@@ -137,6 +138,7 @@ export type Database = {
           id?: string
           items: Json
           order_amount?: number | null
+          scheduled_date?: string | null
           status?: string | null
           total_amount?: number | null
         }
@@ -150,8 +152,27 @@ export type Database = {
           id?: string
           items?: Json
           order_amount?: number | null
+          scheduled_date?: string | null
           status?: string | null
           total_amount?: number | null
+        }
+        Relationships: []
+      }
+      restaurant_settings: {
+        Row: {
+          id: string
+          is_on_vacation: boolean | null
+          vacation_message: string | null
+        }
+        Insert: {
+          id?: string
+          is_on_vacation?: boolean | null
+          vacation_message?: string | null
+        }
+        Update: {
+          id?: string
+          is_on_vacation?: boolean | null
+          vacation_message?: string | null
         }
         Relationships: []
       }

@@ -13,6 +13,7 @@ export type Order = {
   created_at: string | null;
   delivery_address?: string | null;
   bairro?: string | null;
+  scheduled_date?: string | null;
 };
 
 export type OrderFormValues = {
@@ -23,6 +24,7 @@ export type OrderFormValues = {
   delivery_fee: number;
   total_amount: number;
   status: string;
+  scheduled_date?: string;
 };
 
 export const statusBadge = {

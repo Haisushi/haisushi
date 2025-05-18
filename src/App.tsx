@@ -16,6 +16,7 @@ import MenuItems from "@/pages/admin/MenuItems";
 import BusinessHours from "@/pages/admin/BusinessHours";
 import Neighborhoods from "@/pages/admin/Neighborhoods";
 import Orders from "@/pages/admin/Orders";
+import ScheduledOrders from "@/pages/admin/ScheduledOrders";
 import UserProfile from "@/pages/admin/UserProfile";
 import NotFound from "@/pages/NotFound";
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="hours" element={<BusinessHours />} />
               <Route path="neighborhoods" element={<Neighborhoods />} />
               <Route path="orders" element={<Orders />} />
+              <Route path="scheduled-orders" element={<ScheduledOrders />} />
               <Route path="user" element={<UserProfile />} />
             </Route>
             

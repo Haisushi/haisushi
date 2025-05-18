@@ -1,63 +1,84 @@
 
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Menu, X, Coffee, Clock, MapPin, FileText, User } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import {
+  Calendar,
+  Clock,
+  HomeIcon,
+  LayoutDashboard,
+  MapPin,
+  Menu,
+  Package,
+  ScrollText,
+  Settings,
+  User,
+} from 'lucide-react';
+
+const sidebarItems = [
+  {
+    name: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
+  },
+  {
+    name: 'Cardápio',
+    href: '/admin/menu',
+    icon: Menu,
+  },
+  {
+    name: 'Horários',
+    href: '/admin/hours',
+    icon: Clock,
+  },
+  {
+    name: 'Bairros',
+    href: '/admin/neighborhoods',
+    icon: MapPin,
+  },
+  {
+    name: 'Pedidos',
+    href: '/admin/orders',
+    icon: Package,
+  },
+  {
+    name: 'Pedidos Agendados',
+    href: '/admin/scheduled-orders',
+    icon: Calendar,
+  },
+  {
+    name: 'Usuário',
+    href: '/admin/user',
+    icon: User,
+  },
+];
 
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
-
-  const navItems = [
-    { name: 'Dashboard', path: '/admin', icon: <Home className="h-5 w-5" /> },
-    { name: 'Cardápio', path: '/admin/menu', icon: <Coffee className="h-5 w-5" /> },
-    { name: 'Horários', path: '/admin/hours', icon: <Clock className="h-5 w-5" /> },
-    { name: 'Bairros', path: '/admin/neighborhoods', icon: <MapPin className="h-5 w-5" /> },
-    { name: 'Pedidos', path: '/admin/orders', icon: <FileText className="h-5 w-5" /> },
-    { name: 'Usuário', path: '/admin/user', icon: <User className="h-5 w-5" /> },
-  ];
+  const location = useLocation();
 
   return (
-    <aside
-      className={cn(
-        'bg-white h-screen border-r transition-all duration-300 flex flex-col',
-        collapsed ? 'w-16' : 'w-64'
-      )}
-    >
-      <div className="flex items-center justify-between p-4 border-b">
-        {!collapsed && (
-          <div className="font-bold text-xl text-restaurant-primary">RestAdmin</div>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-        </Button>
+    <aside className="bg-white border-r border-border h-full">
+      <div className="p-6 flex items-center">
+        <Link to="/" className="flex items-center">
+          <span className="text-xl font-bold">Restaurante</span>
+        </Link>
       </div>
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1 px-2">
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
-                    isActive
-                      ? 'bg-restaurant-primary text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  )
-                }
-              >
-                {item.icon}
-                {!collapsed && <span>{item.name}</span>}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+
+      <nav className="p-4 space-y-2">
+        {sidebarItems.map((item) => (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
+              location.pathname === item.href
+                ? 'bg-restaurant-primary text-white'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            <item.icon size={18} />
+            <span>{item.name}</span>
+          </Link>
+        ))}
       </nav>
     </aside>
   );
