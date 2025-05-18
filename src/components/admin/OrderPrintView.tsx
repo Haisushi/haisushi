@@ -167,7 +167,6 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
             <div className="receipt-info">
               <div><strong>Data:</strong> {orderDate}</div>
               <div><strong>Cliente:</strong> {order.customer_name || 'N/A'}</div>
-              <div><strong>Telefone:</strong> {order.customer_phone || 'N/A'}</div>
               <div><strong>Endereço:</strong> {order.delivery_address || 'N/A'}</div>
               <div><strong>Bairro:</strong> {order.bairro || 'N/A'}</div>
               <div><strong>Status:</strong> {order.status || 'Pendente'}</div>
