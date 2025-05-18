@@ -27,9 +27,32 @@ export type Database = {
         }
         Relationships: []
       }
-      menu_items: {
+      menu_categories: {
         Row: {
           description: string | null
+          display_order: number
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          category_id: string | null
+          description: string | null
+          display_order: number
           embedding: string | null
           id: string
           is_available: boolean | null
@@ -37,7 +60,9 @@ export type Database = {
           price: number
         }
         Insert: {
+          category_id?: string | null
           description?: string | null
+          display_order?: number
           embedding?: string | null
           id?: string
           is_available?: boolean | null
@@ -45,14 +70,24 @@ export type Database = {
           price: number
         }
         Update: {
+          category_id?: string | null
           description?: string | null
+          display_order?: number
           embedding?: string | null
           id?: string
           is_available?: boolean | null
           name?: string
           price?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operating_hours: {
         Row: {
@@ -80,27 +115,36 @@ export type Database = {
       }
       orders: {
         Row: {
+          bairro: string | null
           created_at: string | null
           customer_name: string | null
           customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
           id: string
           items: Json
           status: string | null
           total_amount: number | null
         }
         Insert: {
+          bairro?: string | null
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
           id?: string
           items: Json
           status?: string | null
           total_amount?: number | null
         }
         Update: {
+          bairro?: string | null
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
           id?: string
           items?: Json
           status?: string | null
@@ -113,6 +157,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_column_if_not_exists: {
+        Args: {
+          p_table_name: string
+          p_column_name: string
+          p_column_type: string
+          p_default_value?: string
+        }
+        Returns: undefined
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -168,6 +221,14 @@ export type Database = {
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: unknown
+      }
+      match_documents: {
+        Args: { filter: Json; match_count: number; query_embedding: string }
+        Returns: {
+          pagecontent: string
+          metadata: Json
+          similarity: number
+        }[]
       }
       sparsevec_out: {
         Args: { "": unknown }

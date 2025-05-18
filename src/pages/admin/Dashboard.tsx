@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -124,35 +125,8 @@ const Dashboard = () => {
           ))}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações do Sistema</CardTitle>
-            <CardDescription>Configurações e recursos disponíveis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Supabase URL</span>
-                <span className="text-sm font-mono bg-gray-100 p-1 rounded">
-                  {import.meta.env.VITE_SUPABASE_URL ? "✅ Configurado" : "❌ Não configurado"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Supabase Anon Key</span>
-                <span className="text-sm font-mono bg-gray-100 p-1 rounded">
-                  {import.meta.env.VITE_SUPABASE_ANON_KEY ? "✅ Configurado" : "❌ Não configurado"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Vector Extension</span>
-                <span className="text-sm font-mono bg-gray-100 p-1 rounded">✅ Disponível</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      
+      {/* Removed the info card with environment variables */}
     </div>
   );
 };

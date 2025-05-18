@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -35,13 +36,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Edit, Plus, Search, Trash2 } from 'lucide-react';
+import { Edit, Plus, Search, Trash2, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MenuItem, MenuItemFormValues } from '@/types/MenuItem';
+import { MenuItem, MenuItemFormValues, MenuCategory } from '@/types/MenuItem';
 
 // Define the form schema
 const menuItemFormSchema = z.object({
@@ -49,15 +51,19 @@ const menuItemFormSchema = z.object({
   description: z.string().min(5, { message: 'Descrição precisa ter no mínimo 5 caracteres' }),
   price: z.coerce.number().positive({ message: 'O preço deve ser um valor positivo' }),
   is_available: z.boolean().default(true),
+  category_id: z.string().nullable(),
+  display_order: z.coerce.number().int().nonnegative().default(0),
 });
 
 const MenuItems = () => {
   const { supabase } = useAuth();
   const { toast } = useToast();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState<boolean | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentMenuItem, setCurrentMenuItem] = useState<MenuItem | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -70,8 +76,30 @@ const MenuItems = () => {
       description: '',
       price: 0,
       is_available: true,
+      category_id: null,
+      display_order: 0,
     },
   });
+
+  // Fetch categories
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('menu_categories')
+        .select('*')
+        .order('display_order');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as categorias.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Fetch menu items
   const fetchMenuItems = async () => {
@@ -83,13 +111,17 @@ const MenuItems = () => {
         query = query.eq('is_available', availabilityFilter);
       }
 
+      if (categoryFilter) {
+        query = query.eq('category_id', categoryFilter);
+      }
+
       if (searchTerm) {
         // If using vector search, you'd call a function here
         // For now, doing a simple text search
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query.order('name');
+      const { data, error } = await query.order('display_order');
 
       if (error) throw error;
       setMenuItems(data || []);
@@ -106,20 +138,104 @@ const MenuItems = () => {
   };
 
   useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
     fetchMenuItems();
-  }, [searchTerm, availabilityFilter]);
+  }, [searchTerm, availabilityFilter, categoryFilter]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+  };
+
+  const toggleAvailability = async (item: MenuItem) => {
+    try {
+      const newStatus = !item.is_available;
+      
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ is_available: newStatus })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      setMenuItems(prevItems => 
+        prevItems.map(prevItem => 
+          prevItem.id === item.id 
+            ? { ...prevItem, is_available: newStatus } 
+            : prevItem
+        )
+      );
+
+      toast({
+        title: newStatus ? 'Item ativado' : 'Item desativado',
+        description: `O item foi ${newStatus ? 'ativado' : 'desativado'} com sucesso.`,
+      });
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível alterar a disponibilidade do item.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const moveItemInOrder = async (item: MenuItem, direction: 'up' | 'down') => {
+    try {
+      // Find the item's current position in the current view (filtered items)
+      const currentIndex = menuItems.findIndex(mi => mi.id === item.id);
+      if (currentIndex === -1) return;
+      
+      // Can't move up if at the top, can't move down if at the bottom
+      if ((direction === 'up' && currentIndex === 0) || 
+          (direction === 'down' && currentIndex === menuItems.length - 1)) {
+        return;
+      }
+      
+      // Get the adjacent item
+      const adjacentIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      const adjacentItem = menuItems[adjacentIndex];
+      
+      // Swap display_order values
+      const newOrder = adjacentItem.display_order || 0;
+      const adjacentNewOrder = item.display_order || 0;
+      
+      // Update current item order
+      await supabase
+        .from('menu_items')
+        .update({ display_order: newOrder })
+        .eq('id', item.id);
+        
+      // Update adjacent item order
+      await supabase
+        .from('menu_items')
+        .update({ display_order: adjacentNewOrder })
+        .eq('id', adjacentItem.id);
+      
+      // Re-fetch items to get updated order
+      fetchMenuItems();
+      
+    } catch (error) {
+      console.error('Error changing item order:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível reordenar os itens.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const openEditDialog = (item: MenuItem) => {
     setCurrentMenuItem(item);
     form.reset({
       name: item.name,
-      description: item.description,
+      description: item.description || '',
       price: item.price,
-      is_available: item.is_available,
+      is_available: item.is_available || false,
+      category_id: item.category_id || null,
+      display_order: item.display_order || 0,
     });
     setIsDialogOpen(true);
   };
@@ -131,6 +247,10 @@ const MenuItems = () => {
       description: '',
       price: 0,
       is_available: true,
+      category_id: null,
+      display_order: menuItems.length > 0 
+        ? Math.max(...menuItems.map(item => item.display_order || 0)) + 1 
+        : 0,
     });
     setIsDialogOpen(true);
   };
@@ -171,9 +291,6 @@ const MenuItems = () => {
 
   const onSubmit = async (values: MenuItemFormValues) => {
     try {
-      // For embedded type as a string - using a JSON string representation
-      const mockEmbedding = JSON.stringify(Array(3).fill(0).map(() => Math.random()));
-      
       if (currentMenuItem) {
         // Update existing item
         const { error } = await supabase
@@ -183,7 +300,8 @@ const MenuItems = () => {
             description: values.description,
             price: values.price,
             is_available: values.is_available,
-            // If we had embeddings, we'd update them here
+            category_id: values.category_id,
+            display_order: values.display_order,
           })
           .eq('id', currentMenuItem.id);
 
@@ -195,12 +313,17 @@ const MenuItems = () => {
         });
       } else {
         // Create new item
+        // Generate a mock embedding for new items
+        const mockEmbedding = JSON.stringify(Array(3).fill(0).map(() => Math.random()));
+        
         const { error } = await supabase.from('menu_items').insert({
           name: values.name,
           description: values.description,
           price: values.price,
           is_available: values.is_available,
-          embedding: mockEmbedding,  // Store embedding as a string
+          category_id: values.category_id,
+          display_order: values.display_order,
+          embedding: mockEmbedding,
         });
 
         if (error) throw error;
@@ -221,6 +344,12 @@ const MenuItems = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const getCategoryName = (categoryId: string | null | undefined) => {
+    if (!categoryId) return 'Sem categoria';
+    const category = categories.find(c => c.id === categoryId);
+    return category ? category.name : 'Categoria desconhecida';
   };
 
   return (
@@ -248,25 +377,41 @@ const MenuItems = () => {
               />
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <Button
-              variant={availabilityFilter === null ? "default" : "outline"}
-              onClick={() => setAvailabilityFilter(null)}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={availabilityFilter === true ? "default" : "outline"}
-              onClick={() => setAvailabilityFilter(true)}
-            >
-              Disponíveis
-            </Button>
-            <Button
-              variant={availabilityFilter === false ? "default" : "outline"}
-              onClick={() => setAvailabilityFilter(false)}
-            >
-              Indisponíveis
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            <Select value={categoryFilter || ''} onValueChange={(value) => setCategoryFilter(value || null)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todas categorias" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas categorias</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={availabilityFilter === null ? "default" : "outline"}
+                onClick={() => setAvailabilityFilter(null)}
+              >
+                Todos
+              </Button>
+              <Button
+                variant={availabilityFilter === true ? "default" : "outline"}
+                onClick={() => setAvailabilityFilter(true)}
+              >
+                Disponíveis
+              </Button>
+              <Button
+                variant={availabilityFilter === false ? "default" : "outline"}
+                onClick={() => setAvailabilityFilter(false)}
+              >
+                Indisponíveis
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -286,8 +431,10 @@ const MenuItems = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Ordem</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Preço</TableHead>
                     <TableHead>Disponibilidade</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -296,19 +443,46 @@ const MenuItems = () => {
                 <TableBody>
                   {menuItems.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex flex-col items-center gap-1">
+                          <span>{item.display_order}</span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => moveItemInOrder(item, 'up')}
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => moveItemInOrder(item, 'down')}
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
+                      <TableCell>{getCategoryName(item.category_id)}</TableCell>
                       <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
                       <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            item.is_available
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                        <Button
+                          variant={item.is_available ? "outline" : "destructive"} 
+                          size="sm"
+                          onClick={() => toggleAvailability(item)}
+                          className="flex items-center gap-1"
                         >
-                          {item.is_available ? 'Disponível' : 'Indisponível'}
-                        </span>
+                          {item.is_available ? (
+                            <><Check className="h-4 w-4" /> Disponível</>
+                          ) : (
+                            <><X className="h-4 w-4" /> Indisponível</>
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
@@ -393,6 +567,55 @@ const MenuItems = () => {
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Sem categoria</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="display_order"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ordem de exibição</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Quanto menor o número, mais alto o item aparece na lista.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

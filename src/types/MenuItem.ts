@@ -6,6 +6,8 @@ export type MenuItem = {
   price: number;
   is_available: boolean | null;
   embedding?: any;
+  category_id?: string | null;
+  display_order?: number;
 };
 
 export type MenuItemFormValues = {
@@ -13,4 +15,13 @@ export type MenuItemFormValues = {
   description: string;
   price: number;
   is_available: boolean;
+  category_id: string | null;
+  display_order: number;
+};
+
+export type MenuCategory = {
+  id: string;
+  name: string;
+  description: string | null;
+  display_order: number;
 };

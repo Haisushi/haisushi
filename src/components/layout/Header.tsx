@@ -2,29 +2,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-
-// Import the correct URL constant
-import { SUPABASE_URL } from '@/integrations/supabase/client';
 
 const Header = () => {
   const { signOut } = useAuth();
-  
-  // Check if using demo Supabase URL by comparing with the hardcoded value
-  const isDemoMode = SUPABASE_URL.includes('placeholder.supabase.co') || 
-                   SUPABASE_URL.includes('eflkehzzvaumatnapmrm.supabase.co');
 
   return (
-    <header className="bg-white border-b flex flex-col sticky top-0 z-10">
-      {isDemoMode && (
-        <Alert variant="destructive" className="rounded-none border-y border-amber-200 py-1 bg-amber-50 text-amber-800">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-xs">
-            Usando modo demonstração. Para funcionalidades completas, conecte ao Supabase e configure as variáveis de ambiente.
-          </AlertDescription>
-        </Alert>
-      )}
+    <header className="bg-white border-b sticky top-0 z-10">
       <div className="h-16 flex items-center justify-between px-6">
         <h1 className="text-xl font-semibold">Painel Administrativo</h1>
         <Button variant="outline" className="flex items-center gap-2" onClick={signOut}>
