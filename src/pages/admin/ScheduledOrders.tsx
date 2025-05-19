@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Edit } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, ReloadIcon } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -19,27 +20,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatPhone } from '@/lib/utils';
 import { Order, statusBadge, statusLabel } from '@/types/Order';
+import { animate } from '@/lib/animations';
 
 const ScheduledOrders = () => {
   const { supabase } = useAuth();
@@ -79,8 +64,57 @@ const ScheduledOrders = () => {
     }
   };
 
+  // Setup realtime subscription
   useEffect(() => {
     fetchScheduledOrders();
+    
+    // Subscribe to changes in orders_closed table for scheduled orders
+    const channel = supabase
+      .channel('scheduled-orders-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders_closed' },
+        (payload) => {
+          console.log('Scheduled orders realtime update:', payload);
+          
+          // Only update if the record has a scheduled_date
+          const newRecord = payload.new as any;
+          if (newRecord && newRecord.scheduled_date) {
+            fetchScheduledOrders();
+            
+            // Show notification for new scheduled orders
+            if (payload.eventType === 'INSERT') {
+              toast({
+                title: 'Novo pedido agendado',
+                description: `Pedido agendado para ${formatDate(newRecord.scheduled_date)}`,
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to changes in regular orders table for records that might have scheduled_date
+    const ordersChannel = supabase
+      .channel('orders-scheduled-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          const newRecord = payload.new as any;
+          if (newRecord && newRecord.scheduled_date) {
+            console.log('Regular order with schedule update:', payload);
+            fetchScheduledOrders();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
+    };
   }, [dateFilter]);
 
   // Format date display
@@ -159,11 +193,14 @@ const ScheduledOrders = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Pedidos Agendados</h1>
+      <div className={cn("flex justify-between items-center", animate({ variant: "fade-in" }))}>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Pedidos Agendados</h1>
+        <Button onClick={fetchScheduledOrders} variant="outline" size="icon" title="Atualizar pedidos" className="animate-in hover:bg-gray-100">
+          <ReloadIcon className="h-4 w-4" />
+        </Button>
       </div>
 
-      <Card>
+      <Card className={cn("backdrop-blur-sm bg-white/90 shadow-lg border-purple-100", animate({ variant: "slide-up", delay: 100 }))}>
         <CardHeader>
           <CardTitle>Filtrar por data</CardTitle>
         </CardHeader>
@@ -174,11 +211,11 @@ const ScheduledOrders = () => {
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[240px] justify-start text-left font-normal",
+                    "w-[240px] justify-start text-left font-normal shadow-sm",
                     !dateFilter && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4 text-purple-500" />
                   {dateFilter ? format(dateFilter, "PPP", { locale: ptBR }) : "Selecionar data"}
                 </Button>
               </PopoverTrigger>
@@ -197,6 +234,7 @@ const ScheduledOrders = () => {
               variant="outline" 
               size="sm" 
               onClick={() => setDateFilter(null)}
+              className="hover:bg-gray-100 border-purple-200"
             >
               Limpar filtro
             </Button>
@@ -204,11 +242,11 @@ const ScheduledOrders = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={cn("backdrop-blur-sm bg-white/90 shadow-lg border-purple-100", animate({ variant: "slide-up", delay: 200 }))}>
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-restaurant-primary"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
             </div>
           ) : orders.length === 0 ? (
             <div className="py-10 text-center">
@@ -229,17 +267,27 @@ const ScheduledOrders = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => {
+                  {orders.map((order, idx) => {
                     const { orderAmount, deliveryFee, total } = calculateTotal(order);
                     return (
-                      <TableRow key={order.id}>
+                      <TableRow 
+                        key={order.id} 
+                        className={cn(
+                          "hover:bg-gray-50/50 transition-colors",
+                          animate({ variant: "fade-in", delay: 100 + idx * 50 })
+                        )}
+                      >
                         <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
                         <TableCell>{formatPhone(order.customer_phone)}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {formatItems(order.items)}
                         </TableCell>
                         <TableCell>{order.delivery_address || 'N/A'} {order.bairro ? `- ${order.bairro}` : ''}</TableCell>
-                        <TableCell>{order.scheduled_date ? formatDate(order.scheduled_date) : 'N/A'}</TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md font-medium">
+                            {order.scheduled_date ? formatDate(order.scheduled_date) : 'N/A'}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right font-mono">
                           {total.toFixed(2)}
                         </TableCell>

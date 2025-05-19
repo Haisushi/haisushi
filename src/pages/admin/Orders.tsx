@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Edit, FileText, Plus, Printer, Calendar as CalendarIcon } from 'lucide-react';
+import { ReloadIcon } from '@radix-ui/react-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -47,6 +48,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatPhone } from '@/lib/utils';
 import { MenuItem } from '@/types/MenuItem';
+import { animate } from '@/lib/animations';
 
 // Define the form schema
 const orderFormSchema = z.object({

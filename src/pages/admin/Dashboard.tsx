@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Coffee, Clock, MapPin, FileText } from 'lucide-react';
+import { animate } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 type DashboardStats = {
   menuItemsAvailable: number;
@@ -69,35 +71,39 @@ const Dashboard = () => {
       title: 'Itens Disponíveis',
       value: stats.menuItemsAvailable,
       description: 'Pratos ativos no cardápio',
-      icon: <Coffee className="h-8 w-8 text-restaurant-primary" />,
-      color: 'border-restaurant-primary',
+      icon: <Coffee className="h-8 w-8 text-purple-500" />,
+      color: 'border-purple-500 shadow-purple-500/10',
+      delay: 100,
     },
     {
       title: 'Pedidos Pendentes',
       value: stats.pendingOrders,
       description: 'Aguardando confirmação',
-      icon: <FileText className="h-8 w-8 text-restaurant-secondary" />,
-      color: 'border-restaurant-secondary',
+      icon: <FileText className="h-8 w-8 text-pink-500" />,
+      color: 'border-pink-500 shadow-pink-500/10',
+      delay: 200,
     },
     {
       title: 'Dias Fechados',
       value: stats.closedDays,
       description: 'Neste mês',
-      icon: <Clock className="h-8 w-8 text-restaurant-warning" />,
-      color: 'border-restaurant-warning',
+      icon: <Clock className="h-8 w-8 text-amber-500" />,
+      color: 'border-amber-500 shadow-amber-500/10',
+      delay: 300,
     },
     {
       title: 'Bairros',
       value: stats.neighborhoods,
       description: 'Áreas de entrega',
-      icon: <MapPin className="h-8 w-8 text-restaurant-success" />,
-      color: 'border-restaurant-success',
+      icon: <MapPin className="h-8 w-8 text-emerald-500" />,
+      color: 'border-emerald-500 shadow-emerald-500/10',
+      delay: 400,
     },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
+      <h1 className={cn("text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent", animate({ variant: "fade-in" }))}>Dashboard</h1>
       
       {stats.loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -109,8 +115,14 @@ const Dashboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((card) => (
-            <Card key={card.title} className={`shadow-sm card-hover border-l-4 ${card.color}`}>
+          {statCards.map((card, index) => (
+            <Card 
+              key={card.title} 
+              className={cn(
+                `backdrop-blur-sm bg-white/90 shadow-lg hover:shadow-xl card-hover border-l-4 ${card.color} transform transition-all duration-300 hover:-translate-y-1`,
+                animate({ variant: "slide-up", delay: card.delay })
+              )}
+            >
               <CardContent className="p-6">
                 <div className="flex justify-between items-center">
                   <div>
@@ -125,8 +137,6 @@ const Dashboard = () => {
           ))}
         </div>
       )}
-      
-      {/* Removed the info card with environment variables */}
     </div>
   );
 };
