@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Order } from '@/types/Order';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatPhone } from '@/lib/utils';
+import { MenuItem } from '@/types/MenuItem';
 
 // Styles for thermal printer format
 const thermalStyles = `
@@ -87,23 +89,56 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
   const { supabase } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [itemNames, setItemNames] = useState<Record<string, string>>({});
+  const [orderItems, setOrderItems] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchItemNames = async () => {
+    const fetchOrderItems = async () => {
       if (!order || !order.items) return;
-      let items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      if (!Array.isArray(items)) return;
-      const ids = items.map((item: any) => item.id).filter(Boolean);
-      if (ids.length === 0) return;
-      const { data, error } = await supabase.from('menu_items').select('id, name').in('id', ids);
-      if (!error && data) {
-        const namesMap: Record<string, string> = {};
-        data.forEach((row: any) => { namesMap[row.id] = row.name; });
-        setItemNames(namesMap);
+      
+      try {
+        // Parse items if they're a string
+        let items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        
+        if (!Array.isArray(items) || items.length === 0) return;
+        
+        // Get all item IDs
+        const itemIds = items.map((item: any) => item.id).filter(Boolean);
+        
+        if (itemIds.length === 0) return;
+        
+        // Fetch complete item data from menu_items
+        const { data, error } = await supabase
+          .from('menu_items')
+          .select('id, name, price')
+          .in('id', itemIds);
+        
+        if (error) {
+          console.error("Error fetching menu items:", error);
+          return;
+        }
+        
+        // Match order items with menu data
+        const processedItems = items.map((item: any) => {
+          const menuItem = data?.find((mi: MenuItem) => mi.id === item.id);
+          
+          return {
+            id: item.id,
+            name: menuItem?.name || item.name || 'Item sem nome',
+            price: menuItem?.price || item.price || 0,
+            quantity: item.quantity || 1,
+            subtotal: (item.quantity || 1) * (menuItem?.price || item.price || 0)
+          };
+        });
+        
+        setOrderItems(processedItems);
+      } catch (error) {
+        console.error("Error processing order items", error);
       }
     };
-    fetchItemNames();
+    
+    if (order) {
+      fetchOrderItems();
+    }
   }, [order, supabase]);
 
   if (!order) return null;
@@ -118,28 +153,7 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
     if (value === null || value === undefined) return 'R$ 0,00';
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
-
-  const formatItems = () => {
-    try {
-      if (!order.items) return [];
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      if (!Array.isArray(items)) return [];
-      return items.map((item: any) => {
-        const name = itemNames[item.id] || item.name || 'Item sem nome';
-        return {
-          name,
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-          subtotal: (item.quantity || 1) * (item.price || 0)
-        };
-      });
-    } catch (error) {
-      console.error("Error parsing order items", error);
-      return [];
-    }
-  };
   
-  const items = formatItems();
   const orderDate = formatDate(order.created_at);
 
   const handlePrint = () => {
@@ -193,15 +207,15 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
             
             <div>
               <div><strong>ITENS DO PEDIDO:</strong></div>
-              {items.length > 0 ? (
-                items.map((item: any, index: number) => (
+              {orderItems.length > 0 ? (
+                orderItems.map((item: any, index: number) => (
                   <div key={index} className="receipt-item">
                     <div>{item.quantity}x {item.name}</div>
                     <div>{formatCurrency(item.subtotal)}</div>
                   </div>
                 ))
               ) : (
-                <div>Nenhum item encontrado</div>
+                <div>Carregando itens...</div>
               )}
             </div>
             
