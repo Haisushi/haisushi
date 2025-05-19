@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { animate } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 const AdminLayout = () => {
   const { user, loading } = useAuth();

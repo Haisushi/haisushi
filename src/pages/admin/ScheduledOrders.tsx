@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Edit, ReloadIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, RefreshCw } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -196,7 +195,7 @@ const ScheduledOrders = () => {
       <div className={cn("flex justify-between items-center", animate({ variant: "fade-in" }))}>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Pedidos Agendados</h1>
         <Button onClick={fetchScheduledOrders} variant="outline" size="icon" title="Atualizar pedidos" className="animate-in hover:bg-gray-100">
-          <ReloadIcon className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 

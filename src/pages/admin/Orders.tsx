@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -36,8 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, FileText, Plus, Printer, Calendar as CalendarIcon } from 'lucide-react';
-import { ReloadIcon } from '@radix-ui/react-icons';
+import { Edit, FileText, Plus, Printer, Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
