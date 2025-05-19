@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,23 +22,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import CategoryDetails from "@/pages/CategoryDetails";
 
 const formSchema = z.object({
-  titulo: z.string().min(1, "Título é obrigatório"),
-  descricao: z.string().min(1, "Descrição é obrigatória"),
-  imagem: z.any().optional(),
+  name: z.string().min(1, "Título é obrigatório"),
+  description: z.string().min(1, "Descrição é obrigatória"),
+  image: z.any().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 interface Category {
   id: string;
-  titulo: string;
-  descricao: string;
-  imagem: string;
-  user_id: string;
-  created_at: string;
+  name: string;
+  description: string;
+  image?: string;
+  user_id?: string;
+  created_at?: string;
+  display_order?: number;
 }
 
 const CategoryList = () => {
@@ -53,8 +54,8 @@ const CategoryList = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      titulo: "",
-      descricao: "",
+      name: "",
+      description: "",
     },
   });
 
@@ -66,7 +67,7 @@ const CategoryList = () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from("categories")
+        .from("menu_categories")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -87,7 +88,7 @@ const CategoryList = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      form.setValue("imagem", file);
+      form.setValue("image", file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -107,10 +108,10 @@ const CategoryList = () => {
         return;
       }
 
-      let imageUrl = editingCategory?.imagem;
+      let imageUrl = editingCategory?.image;
 
-      if (values.imagem) {
-        const file = values.imagem as File;
+      if (values.image) {
+        const file = values.image as File;
         const fileExt = file.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `${fileName}`;
@@ -139,19 +140,19 @@ const CategoryList = () => {
       }
 
       const categoryData = {
-        titulo: values.titulo,
-        descricao: values.descricao,
-        imagem: imageUrl,
+        name: values.name,
+        description: values.description,
+        image: imageUrl,
         user_id: user.id,
       };
 
       if (editingId) {
         const { error: updateError } = await supabase
-          .from("categories")
+          .from("menu_categories")
           .update({
-            titulo: categoryData.titulo,
-            descricao: categoryData.descricao,
-            imagem: categoryData.imagem,
+            name: categoryData.name,
+            description: categoryData.description,
+            image: categoryData.image,
           })
           .eq("id", editingId);
 
@@ -166,7 +167,7 @@ const CategoryList = () => {
         });
       } else {
         const { error: insertError } = await supabase
-          .from("categories")
+          .from("menu_categories")
           .insert([categoryData]);
 
         if (insertError) {
@@ -199,10 +200,10 @@ const CategoryList = () => {
   const handleEdit = (category: Category) => {
     setEditingId(category.id);
     setEditingCategory(category);
-    setImagePreview(category.imagem);
+    setImagePreview(category.image || null);
     form.reset({
-      titulo: category.titulo,
-      descricao: category.descricao,
+      name: category.name,
+      description: category.description,
     });
     setIsFormOpen(true);
   };
@@ -210,15 +211,15 @@ const CategoryList = () => {
   const handleDelete = async (id: string) => {
     try {
       const { data: category, error: fetchError } = await supabase
-        .from("categories")
-        .select("imagem")
+        .from("menu_categories")
+        .select("image")
         .eq("id", id)
         .single();
 
       if (fetchError) throw fetchError;
 
-      if (category?.imagem) {
-        const imagePath = category.imagem.split('/').pop();
+      if (category?.image) {
+        const imagePath = category.image.split('/').pop();
         if (imagePath) {
           const { error: deleteImageError } = await supabase.storage
             .from('category-images')
@@ -231,7 +232,7 @@ const CategoryList = () => {
       }
 
       const { error: deleteError } = await supabase
-        .from("categories")
+        .from("menu_categories")
         .delete()
         .eq("id", id);
 
@@ -294,17 +295,17 @@ const CategoryList = () => {
                     {categories.map((category) => (
                       <TableRow key={category.id}>
                         <TableCell>
-                          {category.imagem && (
+                          {category.image && (
                             <img 
-                              src={category.imagem} 
-                              alt={category.titulo}
+                              src={category.image} 
+                              alt={category.name}
                               className="w-12 h-12 object-cover rounded-md"
                             />
                           )}
                         </TableCell>
-                        <TableCell className="font-medium">{category.titulo}</TableCell>
+                        <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell className="max-w-sm">
-                          <p className="truncate">{category.descricao}</p>
+                          <p className="truncate">{category.description}</p>
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
@@ -351,7 +352,7 @@ const CategoryList = () => {
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
                       control={form.control}
-                      name="titulo"
+                      name="name"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Título</FormLabel>
@@ -365,7 +366,7 @@ const CategoryList = () => {
                     
                     <FormField
                       control={form.control}
-                      name="descricao"
+                      name="description"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Descrição</FormLabel>
@@ -379,7 +380,7 @@ const CategoryList = () => {
                     
                     <FormField
                       control={form.control}
-                      name="imagem"
+                      name="image"
                       render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
                           <FormLabel>Imagem</FormLabel>

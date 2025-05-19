@@ -14,9 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const formSchema = z.object({
-  titulo: z.string().min(3, "O título deve ter pelo menos 3 caracteres"),
-  descricao: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
-  imagem: z.string().url("Forneça uma URL válida para a imagem"),
+  name: z.string().min(3, "O título deve ter pelo menos 3 caracteres"),
+  description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
+  image: z.string().url("Forneça uma URL válida para a imagem"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -30,9 +30,9 @@ const CategoryForm = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      titulo: "",
-      descricao: "",
-      imagem: "",
+      name: "",
+      description: "",
+      image: "",
     },
   });
 
@@ -43,7 +43,7 @@ const CategoryForm = () => {
         setIsLoading(true);
         try {
           const { data, error } = await supabase
-            .from("categories")
+            .from("menu_categories")
             .select("*")
             .eq("id", id)
             .single();
@@ -52,9 +52,9 @@ const CategoryForm = () => {
           
           if (data) {
             form.reset({
-              titulo: data.titulo,
-              descricao: data.descricao,
-              imagem: data.imagem,
+              name: data.name,
+              description: data.description || "",
+              image: data.image || "",
             });
           }
         } catch (error) {
@@ -89,11 +89,11 @@ const CategoryForm = () => {
       if (id) {
         // Update existing category
         const { error } = await supabase
-          .from("categories")
+          .from("menu_categories")
           .update({
-            titulo: values.titulo,
-            descricao: values.descricao,
-            imagem: values.imagem,
+            name: values.name,
+            description: values.description,
+            image: values.image,
           })
           .eq("id", id);
           
@@ -106,14 +106,14 @@ const CategoryForm = () => {
       } else {
         // Create new category
         const newCategory = {
-          titulo: values.titulo,
-          descricao: values.descricao,
-          imagem: values.imagem,
+          name: values.name,
+          description: values.description,
+          image: values.image,
           user_id: user.id
         };
         
         const { error } = await supabase
-          .from("categories")
+          .from("menu_categories")
           .insert([newCategory]);
           
         if (error) throw error;
@@ -147,7 +147,7 @@ const CategoryForm = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="titulo"
+              name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Título</FormLabel>
@@ -161,7 +161,7 @@ const CategoryForm = () => {
             
             <FormField
               control={form.control}
-              name="descricao"
+              name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Descrição</FormLabel>
@@ -175,7 +175,7 @@ const CategoryForm = () => {
             
             <FormField
               control={form.control}
-              name="imagem"
+              name="image"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>URL da Imagem</FormLabel>
