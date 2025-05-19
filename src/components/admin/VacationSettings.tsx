@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,7 +25,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Palmtree } from 'lucide-react';
+import { Palmtree, CalendarOff } from 'lucide-react';
+import { animate } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 // Define schema for vacation settings form
 const vacationFormSchema = z.object({
@@ -40,6 +43,7 @@ const VacationSettings = () => {
   const { supabase } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [processingVacation, setProcessingVacation] = useState(false);
 
   // Initialize form with default values
   const form = useForm<VacationFormValues>({
@@ -49,6 +53,8 @@ const VacationSettings = () => {
       is_on_vacation: false,
     },
   });
+
+  const watchVacationMode = form.watch('is_on_vacation');
 
   // Fetch existing settings
   useEffect(() => {
@@ -86,18 +92,81 @@ const VacationSettings = () => {
     fetchSettings();
   }, [supabase, toast]);
 
+  // Update business hours when vacation mode changes
+  const updateBusinessHours = async (isOnVacation: boolean) => {
+    if (!isOnVacation) return; // Only update when vacation mode is turned ON
+    
+    setProcessingVacation(true);
+    try {
+      // Update all business hours to closed when vacation mode is enabled
+      const { error } = await supabase
+        .from('operating_hours')
+        .update({ is_open: false })
+        .neq('id', ''); // This condition applies to all records
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Horários atualizados',
+        description: 'Todos os dias foram marcados como fechados.',
+      });
+    } catch (error) {
+      console.error('Error updating business hours:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar os horários de funcionamento.',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingVacation(false);
+    }
+  };
+
   // Handle form submission
   const onSubmit = async (values: VacationFormValues) => {
     try {
-      const { error } = await supabase
+      // Get settings id first (or create if doesn't exist)
+      let settingsId: string;
+      const { data: existingSettings, error: fetchError } = await supabase
         .from('restaurant_settings')
-        .update({
-          vacation_message: values.vacation_message,
-          is_on_vacation: values.is_on_vacation,
-        })
-        .eq('id', (await supabase.from('restaurant_settings').select('id').limit(1).single()).data?.id);
+        .select('id')
+        .limit(1)
+        .single();
+      
+      if (fetchError && fetchError.code === 'PGRST116') {
+        // Settings don't exist, create them
+        const { data: newSettings, error: insertError } = await supabase
+          .from('restaurant_settings')
+          .insert({
+            vacation_message: values.vacation_message,
+            is_on_vacation: values.is_on_vacation,
+          })
+          .select('id')
+          .single();
+          
+        if (insertError) throw insertError;
+        settingsId = newSettings?.id;
+      } else if (fetchError) {
+        throw fetchError;
+      } else {
+        settingsId = existingSettings.id;
+        
+        // Update existing settings
+        const { error: updateError } = await supabase
+          .from('restaurant_settings')
+          .update({
+            vacation_message: values.vacation_message,
+            is_on_vacation: values.is_on_vacation,
+          })
+          .eq('id', settingsId);
+          
+        if (updateError) throw updateError;
+      }
 
-      if (error) throw error;
+      // If vacation mode was enabled, update business hours
+      if (values.is_on_vacation) {
+        await updateBusinessHours(values.is_on_vacation);
+      }
 
       toast({
         title: 'Configurações atualizadas',
@@ -114,20 +183,20 @@ const VacationSettings = () => {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Palmtree className="mr-2 h-5 w-5" />
+    <Card className={cn("w-full border-none shadow-lg overflow-hidden bg-white/80 backdrop-blur-sm", animate({ variant: "fade-in", delay: 100 }))}>
+      <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50">
+        <CardTitle className="flex items-center text-xl text-amber-800">
+          <Palmtree className="mr-2 h-5 w-5 text-amber-600" />
           Configurações de Férias
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-amber-700/80">
           Configure a mensagem que seus clientes verão quando você estiver de férias.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {loading ? (
           <div className="h-20 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-restaurant-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
           </div>
         ) : (
           <Form {...form}>
@@ -136,17 +205,27 @@ const VacationSettings = () => {
                 control={form.control}
                 name="is_on_vacation"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <FormItem className={cn(
+                    "flex flex-row items-center justify-between rounded-lg border p-4",
+                    field.value ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
+                  )}>
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Modo Férias</FormLabel>
-                      <FormDescription>
+                      <FormLabel className="text-base flex items-center">
+                        <CalendarOff className={cn("mr-2 h-4 w-4", field.value ? "text-amber-600" : "text-gray-500")} />
+                        Modo Férias
+                      </FormLabel>
+                      <FormDescription className={field.value ? "text-amber-700/80" : "text-gray-500"}>
                         Ative quando o restaurante estiver fechado por férias.
+                        {field.value && " Todos os dias serão marcados como fechados."}
                       </FormDescription>
                     </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                        }}
+                        className={field.value ? "data-[state=checked]:bg-amber-500" : ""}
                       />
                     </FormControl>
                   </FormItem>
@@ -164,6 +243,7 @@ const VacationSettings = () => {
                         placeholder="Estamos de férias e retornaremos no dia XX/XX. Agradecemos sua compreensão!"
                         {...field}
                         rows={4}
+                        className="bg-white border border-gray-200"
                       />
                     </FormControl>
                     <FormDescription>
@@ -175,8 +255,22 @@ const VacationSettings = () => {
               />
 
               <CardFooter className="px-0">
-                <Button type="submit" className="ml-auto bg-restaurant-primary hover:bg-restaurant-primary/90">
-                  Salvar Configurações
+                <Button 
+                  type="submit" 
+                  className={cn(
+                    "ml-auto transition-all", 
+                    watchVacationMode 
+                      ? "bg-amber-500 hover:bg-amber-600" 
+                      : "bg-restaurant-primary hover:bg-restaurant-primary/90"
+                  )}
+                  disabled={processingVacation}
+                >
+                  {processingVacation ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
+                      Processando...
+                    </>
+                  ) : "Salvar Configurações"}
                 </Button>
               </CardFooter>
             </form>

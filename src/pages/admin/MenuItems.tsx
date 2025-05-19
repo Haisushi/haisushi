@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,6 +17,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -45,6 +47,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MenuItem, MenuItemFormValues, MenuCategory } from '@/types/MenuItem';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryManager } from '@/components/admin/CategoryManager';
+import { animate } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 // Define the form schema
 const menuItemFormSchema = z.object({
@@ -354,26 +358,26 @@ const MenuItems = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", animate({ variant: "fade-in" }))}>
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Cardápio</h1>
-        <Button onClick={openCreateDialog} className="bg-restaurant-primary hover:bg-restaurant-primary/90">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Cardápio</h1>
+        <Button onClick={openCreateDialog} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg transition-all">
           <Plus className="mr-2 h-4 w-4" /> Adicionar Item
         </Button>
       </div>
 
-      <Tabs defaultValue="items">
-        <TabsList className="mb-4">
-          <TabsTrigger value="items">Itens</TabsTrigger>
-          <TabsTrigger value="categories">Categorias</TabsTrigger>
+      <Tabs defaultValue="items" className="w-full">
+        <TabsList className="mb-4 bg-gray-50 p-1 rounded-lg shadow-inner">
+          <TabsTrigger value="items" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Itens</TabsTrigger>
+          <TabsTrigger value="categories" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Categorias</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="items">
-          <Card>
-            <CardHeader>
-              <CardTitle>Filtros</CardTitle>
+        <TabsContent value="items" className={animate({ variant: "slide-up", delay: 75 })}>
+          <Card className="overflow-hidden border-none shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
+              <CardTitle className="text-xl">Filtros</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col md:flex-row gap-4">
+            <CardContent className="flex flex-col md:flex-row gap-4 p-6">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -381,13 +385,13 @@ const MenuItems = () => {
                     placeholder="Buscar por nome ou descrição..."
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    className="pl-8"
+                    className="pl-8 bg-white border border-gray-200"
                   />
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || null)}>
-                  <SelectTrigger className="w-[180px]">
+                <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value === "all" ? null : value)}>
+                  <SelectTrigger className="w-[180px] bg-white border border-gray-200">
                     <SelectValue placeholder="Todas categorias" />
                   </SelectTrigger>
                   <SelectContent>
@@ -404,18 +408,27 @@ const MenuItems = () => {
                   <Button
                     variant={availabilityFilter === null ? "default" : "outline"}
                     onClick={() => setAvailabilityFilter(null)}
+                    className={cn("border border-gray-200", 
+                      availabilityFilter === null ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white" : ""
+                    )}
                   >
                     Todos
                   </Button>
                   <Button
                     variant={availabilityFilter === true ? "default" : "outline"}
                     onClick={() => setAvailabilityFilter(true)}
+                    className={cn("border border-gray-200", 
+                      availabilityFilter === true ? "bg-gradient-to-r from-green-500 to-teal-500 text-white" : ""
+                    )}
                   >
                     Disponíveis
                   </Button>
                   <Button
                     variant={availabilityFilter === false ? "default" : "outline"}
                     onClick={() => setAvailabilityFilter(false)}
+                    className={cn("border border-gray-200", 
+                      availabilityFilter === false ? "bg-gradient-to-r from-red-500 to-orange-500 text-white" : ""
+                    )}
                   >
                     Indisponíveis
                   </Button>
@@ -424,22 +437,28 @@ const MenuItems = () => {
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
+          <Card className={cn("mt-6 overflow-hidden border-none shadow-lg bg-white/80 backdrop-blur-sm", animate({ variant: "slide-up", delay: 150 }))}>
             <CardContent className="pt-6">
               {loading ? (
                 <div className="flex justify-center py-10">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-restaurant-primary"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
                 </div>
               ) : menuItems.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-muted-foreground">Nenhum item encontrado</p>
+                <div className="py-20 text-center bg-gray-50/50 rounded-lg">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Search className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-muted-foreground text-lg">Nenhum item encontrado</p>
+                    <Button onClick={openCreateDialog} variant="outline">Adicionar novo item</Button>
+                  </div>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+                  <Table className="border-collapse">
+                    <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead>Ordem</TableHead>
+                        <TableHead className="w-16 text-center">Ordem</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead>Categoria</TableHead>
@@ -450,15 +469,15 @@ const MenuItems = () => {
                     </TableHeader>
                     <TableBody>
                       {menuItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
+                        <TableRow key={item.id} className="hover:bg-gray-50/70 transition-colors">
+                          <TableCell className="text-center">
                             <div className="flex flex-col items-center gap-1">
-                              <span>{item.display_order}</span>
+                              <span className="font-bold text-gray-500">{item.display_order}</span>
                               <div className="flex gap-1">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-7 w-7 hover:bg-gray-200 rounded-full"
                                   onClick={() => moveItemInOrder(item, 'up')}
                                 >
                                   <ArrowUp className="h-3 w-3" />
@@ -466,7 +485,7 @@ const MenuItems = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-7 w-7 hover:bg-gray-200 rounded-full"
                                   onClick={() => moveItemInOrder(item, 'down')}
                                 >
                                   <ArrowDown className="h-3 w-3" />
@@ -475,15 +494,25 @@ const MenuItems = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="max-w-[300px] truncate">{item.description}</TableCell>
-                          <TableCell>{getCategoryName(item.category_id)}</TableCell>
-                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                          <TableCell className="max-w-[300px] truncate text-gray-600">{item.description}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                              {getCategoryName(item.category_id)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            R$ {item.price.toFixed(2)}
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant={item.is_available ? "outline" : "destructive"} 
                               size="sm"
                               onClick={() => toggleAvailability(item)}
-                              className="flex items-center gap-1"
+                              className={cn("flex items-center gap-1", 
+                                item.is_available 
+                                  ? "border-green-300 hover:border-green-400 text-green-600" 
+                                  : "bg-red-100 hover:bg-red-200 text-red-600 border-red-200"
+                              )}
                             >
                               {item.is_available ? (
                                 <><Check className="h-4 w-4" /> Disponível</>
@@ -497,6 +526,7 @@ const MenuItems = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => openEditDialog(item)}
+                              className="hover:bg-gray-100 text-blue-600 hover:text-blue-800"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -504,7 +534,7 @@ const MenuItems = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => confirmDelete(item.id)}
-                              className="text-red-500 hover:text-red-700"
+                              className="hover:bg-red-50 text-red-500 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -519,19 +549,19 @@ const MenuItems = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="categories">
+        <TabsContent value="categories" className={animate({ variant: "slide-up", delay: 75 })}>
           <CategoryManager />
         </TabsContent>
       </Tabs>
 
       {/* Menu Item Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[550px] bg-white/95 backdrop-blur-sm border-none shadow-xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               {currentMenuItem ? 'Editar Item do Cardápio' : 'Adicionar Item ao Cardápio'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-gray-500">
               Preencha os detalhes do item do cardápio abaixo.
             </DialogDescription>
           </DialogHeader>
@@ -545,7 +575,7 @@ const MenuItems = () => {
                   <FormItem>
                     <FormLabel>Nome</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nome do item" {...field} />
+                      <Input placeholder="Nome do item" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -559,7 +589,7 @@ const MenuItems = () => {
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Descrição do item" {...field} />
+                      <Textarea placeholder="Descrição do item" {...field} className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -579,6 +609,7 @@ const MenuItems = () => {
                         min="0"
                         placeholder="0.00"
                         {...field}
+                        className="bg-white"
                       />
                     </FormControl>
                     <FormMessage />
@@ -597,7 +628,7 @@ const MenuItems = () => {
                       value={field.value || undefined}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white">
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
@@ -625,9 +656,10 @@ const MenuItems = () => {
                         min="0"
                         step="1"
                         {...field}
+                        className="bg-white"
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-gray-500">
                       Quanto menor o número, mais alto o item aparece na lista.
                     </FormDescription>
                     <FormMessage />
@@ -639,10 +671,10 @@ const MenuItems = () => {
                 control={form.control}
                 name="is_available"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between">
+                  <FormItem className="flex flex-row items-center justify-between bg-white/70 p-4 rounded-lg border">
                     <div className="space-y-0.5">
                       <FormLabel>Disponível</FormLabel>
-                      <FormDescription>
+                      <FormDescription className="text-gray-500">
                         O item está disponível para venda?
                       </FormDescription>
                     </div>
@@ -656,8 +688,8 @@ const MenuItems = () => {
                 )}
               />
 
-              <DialogFooter>
-                <Button type="submit" className="bg-restaurant-primary hover:bg-restaurant-primary/90">
+              <DialogFooter className="pt-4">
+                <Button type="submit" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md">
                   {currentMenuItem ? 'Salvar Alterações' : 'Criar Item'}
                 </Button>
               </DialogFooter>
@@ -668,23 +700,23 @@ const MenuItems = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white/95 backdrop-blur-sm border-none shadow-xl">
           <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogTitle className="text-xl text-red-600">Confirmar exclusão</DialogTitle>
             <DialogDescription>
               Esta ação não pode ser desfeita. Este item será permanentemente excluído do cardápio.
             </DialogDescription>
           </DialogHeader>
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="bg-red-50 text-red-800 border-red-200">
             <AlertDescription>
               Todos os dados relacionados a este item serão removidos.
             </AlertDescription>
           </Alert>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               Excluir
             </Button>
           </DialogFooter>
