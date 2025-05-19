@@ -124,7 +124,6 @@ export type Database = {
           id: string
           items: Json
           order_amount: number | null
-          scheduled_date: string | null
           status: string | null
           total_amount: number | null
         }
@@ -138,7 +137,6 @@ export type Database = {
           id?: string
           items: Json
           order_amount?: number | null
-          scheduled_date?: string | null
           status?: string | null
           total_amount?: number | null
         }
@@ -152,7 +150,6 @@ export type Database = {
           id?: string
           items?: Json
           order_amount?: number | null
-          scheduled_date?: string | null
           status?: string | null
           total_amount?: number | null
         }
