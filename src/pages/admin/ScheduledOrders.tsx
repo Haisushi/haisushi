@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -39,7 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, formatPhone } from '@/lib/utils';
 import { Order, statusBadge, statusLabel } from '@/types/Order';
 
 const ScheduledOrders = () => {
@@ -54,7 +53,7 @@ const ScheduledOrders = () => {
     setLoading(true);
     try {
       let query = supabase
-        .from('orders')
+        .from('orders_closed')
         .select('*')
         .not('scheduled_date', 'is', null);
 
@@ -87,26 +86,57 @@ const ScheduledOrders = () => {
   // Format date display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Data inválida';
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return 'Data inválida';
+    }
   };
 
   // Format items for display
   const formatItems = (items: any) => {
     if (!items) return 'Nenhum item';
-    
     try {
-      const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
-      
-      if (!Array.isArray(parsedItems) || !parsedItems.length) return 'Nenhum item';
-      
-      return parsedItems.map((item: any) => {
-        if (typeof item === 'object' && item !== null) {
-          const quantity = item.quantity || 1;
-          const name = item.name || 'Item sem nome';
-          return `${quantity}x ${name}`;
+      // Se já for array, retorna normalmente
+      if (Array.isArray(items)) {
+        if (!items.length) return 'Nenhum item';
+        return items.map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            const quantity = item.quantity || 1;
+            const name = item.name || 'Item sem nome';
+            return `${quantity}x ${name}`;
+          }
+          return String(item);
+        }).join(', ');
+      }
+      // Se for string
+      if (typeof items === 'string') {
+        const trimmed = items.trim();
+        // Só faz parse se parecer JSON
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          const parsed = JSON.parse(trimmed);
+          if (!Array.isArray(parsed) || !parsed.length) return 'Nenhum item';
+          return parsed.map((item: any) => {
+            if (typeof item === 'object' && item !== null) {
+              const quantity = item.quantity || 1;
+              const name = item.name || 'Item sem nome';
+              return `${quantity}x ${name}`;
+            }
+            return String(item);
+          }).join(', ');
+        } else {
+          // String simples
+          return trimmed;
         }
-        return String(item);
-      }).join(', ');
+      }
+      // Se for objeto
+      if (typeof items === 'object') {
+        return JSON.stringify(items);
+      }
+      return String(items);
     } catch (e) {
       console.error("Error formatting items:", e);
       return 'Erro ao mostrar itens';
@@ -204,7 +234,7 @@ const ScheduledOrders = () => {
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
-                        <TableCell>{order.customer_phone || 'N/A'}</TableCell>
+                        <TableCell>{formatPhone(order.customer_phone)}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {formatItems(order.items)}
                         </TableCell>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Vacation } from 'lucide-react';
+import { Palmtree } from 'lucide-react';
 
 // Define schema for vacation settings form
 const vacationFormSchema = z.object({
@@ -118,7 +117,7 @@ const VacationSettings = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center">
-          <Vacation className="mr-2 h-5 w-5" />
+          <Palmtree className="mr-2 h-5 w-5" />
           Configurações de Férias
         </CardTitle>
         <CardDescription>

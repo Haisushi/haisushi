@@ -1,61 +1,54 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AppLayout from '@/components/layout/AppLayout';
-import AdminLayout from '@/components/layout/AdminLayout';
-import Index from '@/pages/Index';
-import CategoryDetails from '@/pages/CategoryDetails';
-import EpisodeDetails from '@/pages/EpisodeDetails';
-import Search from '@/pages/Search';
-import NotFound from '@/pages/NotFound';
-import Dashboard from '@/pages/admin/Dashboard';
-import EpisodeForm from '@/pages/admin/EpisodeForm';
-import EpisodeList from '@/pages/admin/EpisodeList';
-import CategoryForm from '@/pages/admin/CategoryForm';
-import CategoryList from '@/pages/admin/CategoryList';
-import Login from '@/pages/auth/Login';
-import Register from '@/pages/auth/Register';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
-function App() {
-  return (
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+
+// Layouts
+import AdminLayout from "@/components/layout/AdminLayout";
+
+// Pages
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/admin/Dashboard";
+import MenuItems from "@/pages/admin/MenuItems";
+import BusinessHours from "@/pages/admin/BusinessHours";
+import Neighborhoods from "@/pages/admin/Neighborhoods";
+import Orders from "@/pages/admin/Orders";
+import ScheduledOrders from "@/pages/admin/ScheduledOrders";
+import UserProfile from "@/pages/admin/UserProfile";
+import NotFound from "@/pages/NotFound";
+
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Index />} />
-            <Route path="categories/:id" element={<CategoryDetails />} />
-            <Route path="episodes/:id" element={<EpisodeDetails />} />
-            <Route path="search" element={<Search />} />
-            <Route path="/categoria/:id" element={<CategoryDetails />} />
-          </Route>
-          
-          {/* Auth routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Protected admin routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Dashboard />} />
-            <Route path="categories" element={<CategoryList />} />
-            <Route path="categories/new" element={<CategoryForm />} />
-            <Route path="categories/:id/edit" element={<CategoryForm />} />
-            <Route path="episodes" element={<EpisodeList />} />
-            <Route path="episodes/new" element={<EpisodeForm />} />
-            <Route path="episodes/:id/edit" element={<EpisodeForm />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Navigate to="/admin" replace />} />
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="menu" element={<MenuItems />} />
+              <Route path="hours" element={<BusinessHours />} />
+              <Route path="neighborhoods" element={<Neighborhoods />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="scheduled-orders" element={<ScheduledOrders />} />
+              <Route path="user" element={<UserProfile />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>
-  );
-}
+  </QueryClientProvider>
+);
 
 export default App;

@@ -1,10 +1,11 @@
-
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Order } from '@/types/Order';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatPhone } from '@/lib/utils';
 
 // Styles for thermal printer format
 const thermalStyles = `
@@ -83,8 +84,27 @@ interface OrderPrintViewProps {
 
 export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProps) => {
   const { toast } = useToast();
+  const { supabase } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [itemNames, setItemNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchItemNames = async () => {
+      if (!order || !order.items) return;
+      let items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      if (!Array.isArray(items)) return;
+      const ids = items.map((item: any) => item.id).filter(Boolean);
+      if (ids.length === 0) return;
+      const { data, error } = await supabase.from('menu_items').select('id, name').in('id', ids);
+      if (!error && data) {
+        const namesMap: Record<string, string> = {};
+        data.forEach((row: any) => { namesMap[row.id] = row.name; });
+        setItemNames(namesMap);
+      }
+    };
+    fetchItemNames();
+  }, [order, supabase]);
 
   if (!order) return null;
 
@@ -102,20 +122,17 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
   const formatItems = () => {
     try {
       if (!order.items) return [];
-      
-      // Handle both string and JSON object cases
-      const items = typeof order.items === 'string' 
-        ? JSON.parse(order.items) 
-        : order.items;
-        
+      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
       if (!Array.isArray(items)) return [];
-      
-      return items.map((item: any) => ({
-        name: item.name || 'Item sem nome',
-        quantity: item.quantity || 1,
-        price: item.price || 0,
-        subtotal: (item.quantity || 1) * (item.price || 0)
-      }));
+      return items.map((item: any) => {
+        const name = itemNames[item.id] || item.name || 'Item sem nome';
+        return {
+          name,
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          subtotal: (item.quantity || 1) * (item.price || 0)
+        };
+      });
     } catch (error) {
       console.error("Error parsing order items", error);
       return [];
@@ -167,9 +184,9 @@ export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProp
             <div className="receipt-info">
               <div><strong>Data:</strong> {orderDate}</div>
               <div><strong>Cliente:</strong> {order.customer_name || 'N/A'}</div>
+              <div><strong>Telefone:</strong> {formatPhone(order.customer_phone)}</div>
               <div><strong>Endereço:</strong> {order.delivery_address || 'N/A'}</div>
               <div><strong>Bairro:</strong> {order.bairro || 'N/A'}</div>
-              <div><strong>Status:</strong> {order.status || 'Pendente'}</div>
             </div>
             
             <div className="receipt-line"></div>

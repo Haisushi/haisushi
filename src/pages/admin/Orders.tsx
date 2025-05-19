@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -46,7 +45,8 @@ import { Json } from '@/integrations/supabase/types';
 import { OrderPrintView } from '@/components/admin/OrderPrintView';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, formatPhone } from '@/lib/utils';
+import { MenuItem } from '@/types/MenuItem';
 
 // Define the form schema
 const orderFormSchema = z.object({
@@ -79,6 +79,8 @@ const Orders = () => {
   const [dateFilter, setDateFilter] = useState<string>('');
   const [isPrintViewOpen, setIsPrintViewOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [orderItems, setOrderItems] = useState<any[]>([]);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -98,8 +100,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('orders').select('*')
-        .is('scheduled_date', null); // Only show unscheduled orders
+      let query = supabase.from('orders').select('*');
 
       if (statusFilter) {
         query = query.eq('status', statusFilter);
@@ -131,6 +132,32 @@ const Orders = () => {
   useEffect(() => {
     fetchOrders();
   }, [statusFilter, dateFilter]);
+
+  // Buscar itens do menu ao abrir o formulário
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      const { data, error } = await supabase.from('menu_items').select('*').eq('is_available', true);
+      if (!error && data) setMenuItems(data);
+    };
+    fetchMenuItems();
+  }, [supabase]);
+
+  // Atualizar o campo items do formulário sempre que orderItems mudar
+  useEffect(() => {
+    form.setValue('items', JSON.stringify(orderItems));
+    // Atualizar subtotal automaticamente
+    const subtotal = orderItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    form.setValue('order_amount', subtotal);
+    const deliveryFee = form.getValues('delivery_fee') || 0;
+    form.setValue('total_amount', subtotal + deliveryFee);
+  }, [orderItems]);
+
+  // Atualizar total ao mudar taxa de entrega
+  useEffect(() => {
+    const subtotal = form.getValues('order_amount') || 0;
+    const deliveryFee = form.getValues('delivery_fee') || 0;
+    form.setValue('total_amount', subtotal + deliveryFee);
+  }, [form.watch('delivery_fee')]);
 
   const openEditStatusDialog = (order: Order) => {
     setCurrentOrder(order);
@@ -247,21 +274,44 @@ const Orders = () => {
   // Updated formatting function to properly handle different item structures
   const formatItems = (items: Json) => {
     if (!items) return 'Nenhum item';
-    
     try {
-      // Handle string or object
-      const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
-      
-      if (!Array.isArray(parsedItems) || !parsedItems.length) return 'Nenhum item';
-      
-      return parsedItems.map((item: any) => {
-        if (typeof item === 'object' && item !== null) {
-          const quantity = item.quantity || 1;
-          const name = item.name || 'Item sem nome';
-          return `${quantity}x ${name}`;
+      // Se já for array, retorna normalmente
+      if (Array.isArray(items)) {
+        if (!items.length) return 'Nenhum item';
+        return items.map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            const quantity = item.quantity || 1;
+            const name = item.name || 'Item sem nome';
+            return `${quantity}x ${name}`;
+          }
+          return String(item);
+        }).join(', ');
+      }
+      // Se for string
+      if (typeof items === 'string') {
+        const trimmed = items.trim();
+        // Só faz parse se parecer JSON
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          const parsed = JSON.parse(trimmed);
+          if (!Array.isArray(parsed) || !parsed.length) return 'Nenhum item';
+          return parsed.map((item: any) => {
+            if (typeof item === 'object' && item !== null) {
+              const quantity = item.quantity || 1;
+              const name = item.name || 'Item sem nome';
+              return `${quantity}x ${name}`;
+            }
+            return String(item);
+          }).join(', ');
+        } else {
+          // String simples
+          return trimmed;
         }
-        return String(item);
-      }).join(', ');
+      }
+      // Se for objeto
+      if (typeof items === 'object') {
+        return JSON.stringify(items);
+      }
+      return String(items);
     } catch (e) {
       console.error("Error formatting items:", e);
       return 'Erro ao mostrar itens';
@@ -384,7 +434,7 @@ const Orders = () => {
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.customer_name || 'N/A'}</TableCell>
-                        <TableCell>{order.customer_phone || 'N/A'}</TableCell>
+                        <TableCell>{formatPhone(order.customer_phone)}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {formatItems(order.items)}
                         </TableCell>
@@ -481,24 +531,44 @@ const Orders = () => {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="items"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Itens (JSON)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder='[{"id": 1, "name": "Pizza", "price": 35.90, "quantity": 1}]'
-                            className="font-mono text-sm"
-                            rows={5}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Seletor automatizado de itens do menu */}
+                  <div className="space-y-2">
+                    <FormLabel>Itens do Pedido</FormLabel>
+                    <div className="flex gap-2">
+                      <select id="menuItemSelect" className="border rounded px-2 py-1" defaultValue="" onChange={e => {
+                        const id = e.target.value;
+                        if (!id) return;
+                        const item = menuItems.find(mi => mi.id === id);
+                        if (!item) return;
+                        setOrderItems(prev => {
+                          // Se já existe, só aumenta a quantidade
+                          const idx = prev.findIndex(i => i.id === id);
+                          if (idx !== -1) {
+                            const updated = [...prev];
+                            updated[idx].quantity += 1;
+                            return updated;
+                          }
+                          return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+                        });
+                      }}>
+                        <option value="">Selecione um item</option>
+                        {menuItems.map(item => (
+                          <option key={item.id} value={item.id}>{item.name} - R$ {item.price.toFixed(2)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Lista de itens adicionados */}
+                    <ul className="mt-2 space-y-1">
+                      {orderItems.map((item, idx) => (
+                        <li key={item.id} className="flex items-center gap-2">
+                          <span>{item.quantity}x {item.name} (R$ {item.price.toFixed(2)})</span>
+                          <Button size="sm" variant="outline" type="button" onClick={() => setOrderItems(prev => prev.map((i, iidx) => iidx === idx ? { ...i, quantity: i.quantity + 1 } : i))}>+</Button>
+                          <Button size="sm" variant="outline" type="button" onClick={() => setOrderItems(prev => prev.map((i, iidx) => iidx === idx && i.quantity > 1 ? { ...i, quantity: i.quantity - 1 } : i))} disabled={item.quantity <= 1}>-</Button>
+                          <Button size="sm" variant="destructive" type="button" onClick={() => setOrderItems(prev => prev.filter((_, iidx) => iidx !== idx))}>Remover</Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <FormField

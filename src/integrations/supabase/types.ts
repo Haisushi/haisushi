@@ -9,81 +9,215 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      categories: {
+      delivery_areas: {
         Row: {
-          created_at: string
-          descricao: string
+          fee: number
           id: string
-          imagem: string
-          titulo: string
-          user_id: string
+          neighborhood: string
         }
         Insert: {
-          created_at?: string
-          descricao: string
+          fee: number
           id?: string
-          imagem: string
-          titulo: string
-          user_id: string
+          neighborhood: string
         }
         Update: {
-          created_at?: string
-          descricao?: string
+          fee?: number
           id?: string
-          imagem?: string
-          titulo?: string
-          user_id?: string
+          neighborhood?: string
         }
         Relationships: []
       }
-      episodes: {
+      menu_categories: {
         Row: {
-          audio: string
-          created_at: string
-          descricao: string
+          description: string | null
+          display_order: number
           id: string
-          publicado_em: string
-          titulo: string
-          user_id: string
+          name: string
         }
         Insert: {
-          audio: string
-          created_at?: string
-          descricao: string
+          description?: string | null
+          display_order?: number
           id?: string
-          publicado_em: string
-          titulo: string
-          user_id: string
+          name: string
         }
         Update: {
-          audio?: string
-          created_at?: string
-          descricao?: string
+          description?: string | null
+          display_order?: number
           id?: string
-          publicado_em?: string
-          titulo?: string
-          user_id?: string
+          name?: string
         }
         Relationships: []
       }
-      profiles: {
+      menu_items: {
         Row: {
-          avatar_url: string | null
-          created_at: string
+          category_id: string | null
+          description: string | null
+          display_order: number
+          embedding: string | null
           id: string
-          name: string | null
+          is_available: boolean | null
+          name: string
+          price: number
         }
         Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          id: string
-          name?: string | null
+          category_id?: string | null
+          description?: string | null
+          display_order?: number
+          embedding?: string | null
+          id?: string
+          is_available?: boolean | null
+          name: string
+          price: number
         }
         Update: {
-          avatar_url?: string | null
-          created_at?: string
+          category_id?: string | null
+          description?: string | null
+          display_order?: number
+          embedding?: string | null
           id?: string
-          name?: string | null
+          is_available?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operating_hours: {
+        Row: {
+          close_time: string
+          id: string
+          is_open: boolean | null
+          open_time: string
+          weekday: number
+        }
+        Insert: {
+          close_time: string
+          id?: string
+          is_open?: boolean | null
+          open_time: string
+          weekday: number
+        }
+        Update: {
+          close_time?: string
+          id?: string
+          is_open?: boolean | null
+          open_time?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          bairro: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
+          id: string
+          items: Json
+          order_amount: number | null
+          scheduled_date: string | null
+          status: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          bairro?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items: Json
+          order_amount?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          bairro?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items?: Json
+          order_amount?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Relationships: []
+      }
+      orders_closed: {
+        Row: {
+          bairro: string | null
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
+          id: string
+          items: Json
+          order_amount: number | null
+          scheduled_date: string | null
+          status: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          bairro?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items: Json
+          order_amount?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          bairro?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items?: Json
+          order_amount?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Relationships: []
+      }
+      restaurant_settings: {
+        Row: {
+          id: string
+          is_on_vacation: boolean | null
+          vacation_message: string | null
+        }
+        Insert: {
+          id?: string
+          is_on_vacation?: boolean | null
+          vacation_message?: string | null
+        }
+        Update: {
+          id?: string
+          is_on_vacation?: boolean | null
+          vacation_message?: string | null
         }
         Relationships: []
       }
@@ -92,7 +226,115 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_column_if_not_exists: {
+        Args: {
+          p_table_name: string
+          p_column_name: string
+          p_column_type: string
+          p_default_value?: string
+        }
+        Returns: undefined
+      }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
+      match_documents: {
+        Args: { filter: Json; match_count: number; query_embedding: string }
+        Returns: {
+          pagecontent: string
+          metadata: Json
+          similarity: number
+        }[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
