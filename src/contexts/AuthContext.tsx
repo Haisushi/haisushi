@@ -9,6 +9,7 @@ type AuthContextType = {
   session: Session | null;
   supabase: SupabaseClient<Database>;
   loading: boolean;
+  isLoading: boolean; // Added this property
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 };
@@ -99,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     supabase,
     loading,
+    isLoading: loading, // Map loading to isLoading for backward compatibility
     signIn,
     signOut
   };

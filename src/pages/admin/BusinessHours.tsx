@@ -25,7 +25,10 @@ const BusinessHours = () => {
         <DialogContent>
           <BusinessHourForm 
             currentHour={null} 
-            onSubmitSuccess={() => { setDialogOpen(false); fetchBusinessHours(); }} 
+            onSubmitSuccess={() => { 
+              setDialogOpen(false); 
+              fetchBusinessHours(); 
+            }} 
           />
         </DialogContent>
       </Dialog>
