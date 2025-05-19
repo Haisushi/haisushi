@@ -1,132 +1,132 @@
+import { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Podcast, CalendarDays } from "lucide-react";
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Coffee, Clock, MapPin, FileText } from 'lucide-react';
-
-type DashboardStats = {
-  menuItemsAvailable: number;
-  pendingOrders: number;
-  closedDays: number;
-  neighborhoods: number;
-  loading: boolean;
-};
+interface DashboardStats {
+  totalEpisodes: number;
+  latestEpisode: string | null;
+  categories: string[];
+}
 
 const Dashboard = () => {
-  const { supabase } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    menuItemsAvailable: 0,
-    pendingOrders: 0,
-    closedDays: 0,
-    neighborhoods: 0,
-    loading: true,
+    totalEpisodes: 0,
+    latestEpisode: null,
+    categories: [],
   });
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchStats = async () => {
+      setLoading(true);
       try {
-        // Available menu items
-        const { count: menuItemsAvailable } = await supabase
-          .from('menu_items')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_available', true);
+        // Get total episodes
+        const { count: totalEpisodes, error: countError } = await supabase
+          .from("episodes")
+          .select("*", { count: "exact", head: true });
 
-        // Pending orders
-        const { count: pendingOrders } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
+        if (countError) throw countError;
 
-        // Closed days in current month
-        const { count: closedDays } = await supabase
-          .from('operating_hours')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_open', false);
+        // Get latest episode
+        const { data: latestData, error: latestError } = await supabase
+          .from("episodes")
+          .select("titulo, publicado_em")
+          .order("publicado_em", { ascending: false })
+          .limit(1)
+          .single();
 
-        // Total neighborhoods
-        const { count: neighborhoods } = await supabase
-          .from('delivery_areas')
-          .select('*', { count: 'exact', head: true });
+        if (latestError && latestError.code !== "PGRST116") throw latestError;
+
+        // Get unique categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from("episodes")
+          .select("categoria_id");
+
+        if (categoriesError) throw categoriesError;
+
+        // Extract unique categories
+        const uniqueCategories = Array.from(
+          new Set(categoriesData?.map((item) => item.categoria_id) || [])
+        );
 
         setStats({
-          menuItemsAvailable: menuItemsAvailable || 0,
-          pendingOrders: pendingOrders || 0,
-          closedDays: closedDays || 0,
-          neighborhoods: neighborhoods || 0,
-          loading: false,
+          totalEpisodes: totalEpisodes || 0,
+          latestEpisode: latestData?.titulo || null,
+          categories: uniqueCategories,
         });
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        setStats(prev => ({ ...prev, loading: false }));
+        console.error("Error fetching dashboard stats:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchStats();
-  }, [supabase]);
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
-  const statCards = [
-    {
-      title: 'Itens Disponíveis',
-      value: stats.menuItemsAvailable,
-      description: 'Pratos ativos no cardápio',
-      icon: <Coffee className="h-8 w-8 text-restaurant-primary" />,
-      color: 'border-restaurant-primary',
-    },
-    {
-      title: 'Pedidos Pendentes',
-      value: stats.pendingOrders,
-      description: 'Aguardando confirmação',
-      icon: <FileText className="h-8 w-8 text-restaurant-secondary" />,
-      color: 'border-restaurant-secondary',
-    },
-    {
-      title: 'Dias Fechados',
-      value: stats.closedDays,
-      description: 'Neste mês',
-      icon: <Clock className="h-8 w-8 text-restaurant-warning" />,
-      color: 'border-restaurant-warning',
-    },
-    {
-      title: 'Bairros',
-      value: stats.neighborhoods,
-      description: 'Áreas de entrega',
-      icon: <MapPin className="h-8 w-8 text-restaurant-success" />,
-      color: 'border-restaurant-success',
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p>Carregando estatísticas...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Dashboard</h1>
       
-      {stats.loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array(4).fill(0).map((_, i) => (
-            <Card key={i} className="shadow-sm animate-pulse">
-              <CardContent className="p-6 h-32" />
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((card) => (
-            <Card key={card.title} className={`shadow-sm card-hover border-l-4 ${card.color}`}>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm text-gray-500">{card.title}</p>
-                    <p className="text-3xl font-bold mt-1">{card.value}</p>
-                    <p className="text-xs text-gray-500 mt-1">{card.description}</p>
-                  </div>
-                  <div>{card.icon}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-      
-      {/* Removed the info card with environment variables */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total de Episódios</CardTitle>
+            <Podcast className="h-5 w-5 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.totalEpisodes}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Último Episódio</CardTitle>
+            <CalendarDays className="h-5 w-5 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold truncate">
+              {stats.latestEpisode || "Nenhum episódio publicado"}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Categorias</CardTitle>
+            <span className="text-base font-bold">{stats.categories.length}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {stats.categories.length > 0 ? (
+                stats.categories.map((category) => (
+                  <span
+                    key={category}
+                    className="bg-gray-100 text-xs px-2 py-1 rounded-full"
+                  >
+                    {category}
+                  </span>
+                ))
+              ) : (
+                <span className="text-gray-500">Nenhuma categoria encontrada</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

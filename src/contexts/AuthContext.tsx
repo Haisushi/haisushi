@@ -1,113 +1,139 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, SupabaseClient, Session } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
+import { AuthState } from '@/types/auth';
 
-type AuthContextType = {
-  user: User | null;
-  session: Session | null;
-  supabase: SupabaseClient<Database>;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+interface AuthContextType extends AuthState {
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  
+  const [authState, setAuthState] = useState<AuthState>({
+    session: null,
+    user: null,
+    isLoading: true,
+  });
+  const navigate = useNavigate();
+  const [initialSessionChecked, setInitialSessionChecked] = useState(false);
+  const [isAuthChangeFromSignIn, setIsAuthChangeFromSignIn] = useState(false);
+
   useEffect(() => {
-    console.log('Inicializando o contexto de autenticação');
-    
-    // First set up the auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      console.log('Auth state change:', event);
-      
-      if (currentSession) {
-        console.log('Sessão atualizada:', currentSession?.user?.email);
-        setSession(currentSession);
-        setUser(currentSession.user);
-      } else {
-        console.log('Sem sessão');
-        setSession(null);
-        setUser(null);
-      }
-    });
-    
-    // Then check for existing session
+    // First get initial session to know our starting point
     const getInitialSession = async () => {
       try {
-        console.log('Verificando sessão inicial');
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (initialSession) {
-          console.log('Sessão inicial encontrada:', initialSession.user?.email);
-          setSession(initialSession);
-          setUser(initialSession.user);
-        } else {
-          console.log('Nenhuma sessão inicial encontrada');
-        }
+        const { data: { session } } = await supabase.auth.getSession();
+        setAuthState({
+          session,
+          user: session?.user ?? null,
+          isLoading: false,
+        });
+        setInitialSessionChecked(true);
       } catch (error) {
-        console.error("Erro ao obter sessão inicial:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error getting session:", error);
+        setAuthState(prev => ({ ...prev, isLoading: false }));
+        setInitialSessionChecked(true);
       }
     };
-    
+
     getInitialSession();
-    
+
+    // Then set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state change:", event);
+        
+        setAuthState({
+          session,
+          user: session?.user ?? null,
+          isLoading: false,
+        });
+        
+        // Only navigate on explicit sign in/out events, not on token refresh
+        if (event === 'SIGNED_IN' && isAuthChangeFromSignIn) {
+          // Reset the flag
+          setIsAuthChangeFromSignIn(false);
+          setTimeout(() => navigate('/admin'), 0);
+        } else if (event === 'SIGNED_OUT') {
+          setTimeout(() => navigate('/login'), 0);
+        }
+        // For token refreshes or other auth events, we don't navigate
+      }
+    );
+
     return () => {
-      console.log('Limpando listener de autenticação');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, isAuthChangeFromSignIn]);
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Tentando fazer login:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      setIsAuthChangeFromSignIn(true); // Set flag before sign in
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // Navigation will happen in onAuthStateChange
+    } catch (error: any) {
+      setIsAuthChangeFromSignIn(false); // Reset flag if error
+      toast({
+        title: "Erro ao entrar",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
       
-      if (error) {
-        console.error("Erro no login:", error.message);
-      } else if (data.session) {
-        console.log('Login bem-sucedido:', data.user?.email);
-      }
-      
-      return { error };
-    } catch (error) {
-      console.error("SignIn error:", error);
-      return { error };
+      toast({
+        title: "Cadastro realizado",
+        description: "Verifique seu email para confirmar seu cadastro.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('Tentando fazer logout');
       await supabase.auth.signOut();
-      console.log('Logout bem-sucedido');
-    } catch (error) {
-      console.error("SignOut error:", error);
+      // Navigation will be handled by the onAuthStateChange listener
+    } catch (error: any) {
+      toast({
+        title: "Erro ao sair",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const value = {
-    user,
-    session,
-    supabase,
-    loading,
+    ...authState,
     signIn,
-    signOut
+    signUp,
+    signOut,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Show nothing until we've checked the initial session
+  if (!initialSessionChecked) {
+    return null;
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
