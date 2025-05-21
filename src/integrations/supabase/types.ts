@@ -27,30 +27,9 @@ export type Database = {
         }
         Relationships: []
       }
-      menu_categories: {
-        Row: {
-          description: string | null
-          display_order: number
-          id: string
-          name: string
-        }
-        Insert: {
-          description?: string | null
-          display_order?: number
-          id?: string
-          name: string
-        }
-        Update: {
-          description?: string | null
-          display_order?: number
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       menu_items: {
         Row: {
-          category_id: string | null
+          category_name: string | null
           description: string | null
           display_order: number
           embedding: string | null
@@ -60,7 +39,7 @@ export type Database = {
           price: number
         }
         Insert: {
-          category_id?: string | null
+          category_name?: string | null
           description?: string | null
           display_order?: number
           embedding?: string | null
@@ -70,7 +49,7 @@ export type Database = {
           price: number
         }
         Update: {
-          category_id?: string | null
+          category_name?: string | null
           description?: string | null
           display_order?: number
           embedding?: string | null
@@ -79,15 +58,7 @@ export type Database = {
           name?: string
           price?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "menu_items_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "menu_categories"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       operating_hours: {
         Row: {

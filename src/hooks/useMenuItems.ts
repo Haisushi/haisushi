@@ -23,7 +23,7 @@ export const useMenuItems = () => {
       }
 
       if (categoryFilter) {
-        query = query.eq('category_id', categoryFilter);
+        query = query.eq('category_name', categoryFilter);
       }
 
       if (searchTerm) {

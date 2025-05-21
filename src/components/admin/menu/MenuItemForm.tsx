@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -17,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { MenuCategory, MenuItemFormValues, MenuItem } from '@/types/MenuItem';
+import { MenuItemFormValues, MenuItem } from '@/types/MenuItem';
 
 // Define the form schema
 const menuItemFormSchema = z.object({
@@ -25,17 +24,17 @@ const menuItemFormSchema = z.object({
   description: z.string().min(5, { message: 'Descrição precisa ter no mínimo 5 caracteres' }),
   price: z.coerce.number().positive({ message: 'O preço deve ser um valor positivo' }),
   is_available: z.boolean().default(true),
-  category_id: z.string().nullable(),
+  category_name: z.string().nullable(),
   display_order: z.coerce.number().int().nonnegative().default(0),
 });
 
 interface MenuItemFormProps {
   currentMenuItem: MenuItem | null;
-  categories: MenuCategory[];
+  commonCategories: string[];
   onSubmit: (values: MenuItemFormValues) => Promise<void>;
 }
 
-export function MenuItemForm({ currentMenuItem, categories, onSubmit }: MenuItemFormProps) {
+export function MenuItemForm({ currentMenuItem, commonCategories, onSubmit }: MenuItemFormProps) {
   const form = useForm<MenuItemFormValues>({
     resolver: zodResolver(menuItemFormSchema),
     defaultValues: {
@@ -43,7 +42,7 @@ export function MenuItemForm({ currentMenuItem, categories, onSubmit }: MenuItem
       description: currentMenuItem?.description || '',
       price: currentMenuItem?.price || 0,
       is_available: currentMenuItem?.is_available || true,
-      category_id: currentMenuItem?.category_id || null,
+      category_name: currentMenuItem?.category_name || null,
       display_order: currentMenuItem?.display_order || 0,
     },
   });
@@ -102,28 +101,40 @@ export function MenuItemForm({ currentMenuItem, categories, onSubmit }: MenuItem
 
         <FormField
           control={form.control}
-          name="category_id"
+          name="category_name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Categoria</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value || undefined}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="null">Sem categoria</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Digite ou selecione uma categoria"
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(e.target.value || null)}
+                  className="bg-white flex-1"
+                  list="categories"
+                />
+                <datalist id="categories">
+                  <option value="">Sem categoria</option>
+                  {commonCategories.map((category, i) => (
+                    <option key={i} value={category}>{category}</option>
                   ))}
-                </SelectContent>
-              </Select>
+                </datalist>
+                {field.value && (
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10"
+                    onClick={() => field.onChange(null)}
+                  >
+                    ✕
+                  </Button>
+                )}
+              </div>
+              <FormDescription className="text-gray-500">
+                Digite uma categoria existente ou crie uma nova
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -1,12 +1,15 @@
 
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MenuCategory } from '@/types/MenuItem';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { animate } from '@/lib/animations';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface MenuItemFiltersProps {
   searchTerm: string;
@@ -15,7 +18,7 @@ interface MenuItemFiltersProps {
   onAvailabilityFilterChange: (value: boolean | null) => void;
   categoryFilter: string | null;
   onCategoryFilterChange: (value: string | null) => void;
-  categories: MenuCategory[];
+  categories: Category[];
 }
 
 export function MenuItemFilters({
@@ -27,27 +30,62 @@ export function MenuItemFilters({
   onCategoryFilterChange,
   categories
 }: MenuItemFiltersProps) {
+  const clearFilters = () => {
+    onSearchChange('');
+    onAvailabilityFilterChange(null);
+    onCategoryFilterChange(null);
+  };
+
+  const hasActiveFilters = !!searchTerm || availabilityFilter !== null || categoryFilter !== null;
+
   return (
-    <Card className="overflow-hidden border-none shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
-        <CardTitle className="text-xl">Filtros</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col md:flex-row gap-4 p-6">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou descrição..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-8 bg-white border border-gray-200"
-            />
-          </div>
+    <Card className="p-4 border-none bg-white/90 backdrop-blur-sm shadow-md">
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar item..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9 bg-white"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+              onClick={() => onSearchChange('')}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={categoryFilter || undefined} onValueChange={(value) => onCategoryFilterChange(value === "all" ? null : value)}>
-            <SelectTrigger className="w-[180px] bg-white border border-gray-200">
-              <SelectValue placeholder="Todas categorias" />
+        
+        <div className="flex gap-2 md:w-auto">
+          <Select
+            value={availabilityFilter === null ? "all" : availabilityFilter.toString()}
+            onValueChange={(value) => onAvailabilityFilterChange(
+              value === 'all' ? null : value === 'true'
+            )}
+          >
+            <SelectTrigger className="w-full md:w-[180px] bg-white">
+              <SelectValue placeholder="Disponibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os itens</SelectItem>
+              <SelectItem value="true">Disponíveis</SelectItem>
+              <SelectItem value="false">Indisponíveis</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={categoryFilter || "all"}
+            onValueChange={(value) => onCategoryFilterChange(
+              value === 'all' ? null : value
+            )}
+          >
+            <SelectTrigger className="w-full md:w-[180px] bg-white">
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas categorias</SelectItem>
@@ -58,38 +96,18 @@ export function MenuItemFilters({
               ))}
             </SelectContent>
           </Select>
-          
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={availabilityFilter === null ? "default" : "outline"}
-              onClick={() => onAvailabilityFilterChange(null)}
-              className={cn("border border-gray-200", 
-                availabilityFilter === null ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white" : ""
-              )}
+
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="whitespace-nowrap"
             >
-              Todos
+              Limpar filtros
             </Button>
-            <Button
-              variant={availabilityFilter === true ? "default" : "outline"}
-              onClick={() => onAvailabilityFilterChange(true)}
-              className={cn("border border-gray-200", 
-                availabilityFilter === true ? "bg-gradient-to-r from-green-500 to-teal-500 text-white" : ""
-              )}
-            >
-              Disponíveis
-            </Button>
-            <Button
-              variant={availabilityFilter === false ? "default" : "outline"}
-              onClick={() => onAvailabilityFilterChange(false)}
-              className={cn("border border-gray-200", 
-                availabilityFilter === false ? "bg-gradient-to-r from-red-500 to-orange-500 text-white" : ""
-              )}
-            >
-              Indisponíveis
-            </Button>
-          </div>
+          )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

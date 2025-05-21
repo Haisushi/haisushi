@@ -14,7 +14,6 @@ interface MenuItemTableProps {
   onDelete: (id: string) => void;
   onToggleAvailability: (item: MenuItem) => void;
   onMoveItem: (item: MenuItem, direction: 'up' | 'down') => void;
-  getCategoryName: (categoryId: string | null | undefined) => string;
   onCreate: () => void;
 }
 
@@ -25,7 +24,6 @@ export function MenuItemTable({
   onDelete,
   onToggleAvailability,
   onMoveItem,
-  getCategoryName,
   onCreate
 }: MenuItemTableProps) {
   if (loading) {
@@ -93,9 +91,15 @@ export function MenuItemTable({
               <TableCell className="font-medium">{item.name}</TableCell>
               <TableCell className="max-w-[300px] truncate text-gray-600">{item.description}</TableCell>
               <TableCell>
-                <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
-                  {getCategoryName(item.category_id)}
-                </span>
+                {item.category_name ? (
+                  <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                    {item.category_name}
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 rounded-full text-xs bg-gray-50 text-gray-500">
+                    Sem categoria
+                  </span>
+                )}
               </TableCell>
               <TableCell className="text-right font-semibold">
                 R$ {item.price.toFixed(2)}

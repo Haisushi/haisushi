@@ -7,13 +7,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MenuItemForm } from "./MenuItemForm";
-import { MenuCategory, MenuItem, MenuItemFormValues } from "@/types/MenuItem";
+import { MenuItem, MenuItemFormValues } from "@/types/MenuItem";
 
 interface MenuItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentMenuItem: MenuItem | null;
-  categories: MenuCategory[];
+  commonCategories: string[];
   onSubmit: (values: MenuItemFormValues) => Promise<void>;
 }
 
@@ -21,7 +21,7 @@ export function MenuItemDialog({
   isOpen,
   onOpenChange,
   currentMenuItem,
-  categories,
+  commonCategories,
   onSubmit
 }: MenuItemDialogProps) {
   return (
@@ -38,7 +38,7 @@ export function MenuItemDialog({
 
         <MenuItemForm 
           currentMenuItem={currentMenuItem}
-          categories={categories}
+          commonCategories={commonCategories}
           onSubmit={onSubmit}
         />
       </DialogContent>

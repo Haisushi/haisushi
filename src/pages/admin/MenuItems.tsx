@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { MenuItem, MenuItemFormValues } from '@/types/MenuItem';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CategoryManager } from '@/components/admin/CategoryManager';
 import { animate } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useMenuItems } from '@/hooks/useMenuItems';
-import { useMenuCategories } from '@/hooks/useMenuCategories';
 import { MenuItemFilters } from '@/components/admin/menu/MenuItemFilters';
 import { MenuItemTable } from '@/components/admin/menu/MenuItemTable';
 import { MenuItemDialog } from '@/components/admin/menu/MenuItemDialog';
@@ -24,6 +22,7 @@ const MenuItems = () => {
   const [currentMenuItem, setCurrentMenuItem] = useState<MenuItem | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [commonCategories, setCommonCategories] = useState<string[]>([]);
   
   const { 
     menuItems, 
@@ -40,7 +39,20 @@ const MenuItems = () => {
     fetchMenuItems
   } = useMenuItems();
 
-  const { categories, getCategoryName } = useMenuCategories();
+  useEffect(() => {
+    // Extract unique categories from menu items
+    if (menuItems.length > 0) {
+      const categories = menuItems
+        .map(item => item.category_name)
+        .filter((value, index, self) => 
+          value !== null && 
+          value !== undefined && 
+          self.indexOf(value) === index
+        ) as string[];
+      
+      setCommonCategories(categories);
+    }
+  }, [menuItems]);
 
   const openEditDialog = (item: MenuItem) => {
     setCurrentMenuItem(item);
@@ -75,7 +87,7 @@ const MenuItems = () => {
             description: values.description,
             price: values.price,
             is_available: values.is_available,
-            category_id: values.category_id,
+            category_name: values.category_name,
             display_order: values.display_order,
           })
           .eq('id', currentMenuItem.id);
@@ -93,9 +105,8 @@ const MenuItems = () => {
           description: values.description,
           price: values.price,
           is_available: values.is_available,
-          category_id: values.category_id,
+          category_name: values.category_name,
           display_order: values.display_order,
-          // Removed the embedding field that was causing the error
         });
 
         if (error) throw error;
@@ -130,7 +141,6 @@ const MenuItems = () => {
       <Tabs defaultValue="items" className="w-full">
         <TabsList className="mb-4 bg-gray-50 p-1 rounded-lg shadow-inner">
           <TabsTrigger value="items" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Itens</TabsTrigger>
-          <TabsTrigger value="categories" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Categorias</TabsTrigger>
         </TabsList>
         
         <TabsContent value="items" className={animate({ variant: "slide-up", delay: 75 })}>
@@ -141,7 +151,7 @@ const MenuItems = () => {
             onAvailabilityFilterChange={setAvailabilityFilter}
             categoryFilter={categoryFilter}
             onCategoryFilterChange={setCategoryFilter}
-            categories={categories}
+            categories={commonCategories.map(name => ({ id: name, name }))}
           />
 
           <Card className={cn("mt-6 overflow-hidden border-none shadow-lg bg-white/80 backdrop-blur-sm", animate({ variant: "slide-up", delay: 150 }))}>
@@ -153,15 +163,10 @@ const MenuItems = () => {
                 onDelete={confirmDelete}
                 onToggleAvailability={toggleAvailability}
                 onMoveItem={moveItemInOrder}
-                getCategoryName={getCategoryName}
                 onCreate={openCreateDialog}
               />
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="categories" className={animate({ variant: "slide-up", delay: 75 })}>
-          <CategoryManager />
         </TabsContent>
       </Tabs>
 
@@ -170,7 +175,7 @@ const MenuItems = () => {
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         currentMenuItem={currentMenuItem}
-        categories={categories}
+        commonCategories={commonCategories}
         onSubmit={onSubmit}
       />
 
