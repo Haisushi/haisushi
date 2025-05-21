@@ -67,7 +67,7 @@ const MenuItems = () => {
   const onSubmit = async (values: MenuItemFormValues) => {
     try {
       if (currentMenuItem) {
-        // Update existing item
+        // Update existing item - don't modify the embedding
         const { error } = await supabase
           .from('menu_items')
           .update({
@@ -87,10 +87,7 @@ const MenuItems = () => {
           description: 'O item do cardápio foi atualizado com sucesso.',
         });
       } else {
-        // Create new item
-        // Generate a mock embedding for new items
-        const mockEmbedding = JSON.stringify(Array(3).fill(0).map(() => Math.random()));
-        
+        // Create new item - skip the embedding field entirely
         const { error } = await supabase.from('menu_items').insert({
           name: values.name,
           description: values.description,
@@ -98,7 +95,7 @@ const MenuItems = () => {
           is_available: values.is_available,
           category_id: values.category_id,
           display_order: values.display_order,
-          embedding: mockEmbedding,
+          // Removed the embedding field that was causing the error
         });
 
         if (error) throw error;
