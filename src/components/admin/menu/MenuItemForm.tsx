@@ -118,7 +118,9 @@ export function MenuItemForm({ currentMenuItem, categories, onSubmit }: MenuItem
                 <SelectContent>
                   <SelectItem value="null">Sem categoria</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
