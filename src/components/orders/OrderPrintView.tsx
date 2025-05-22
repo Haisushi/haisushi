@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Order } from '@/types/Order';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/types/MenuItem';
-import { useOrderItems } from './hooks/useOrderItems';
 import { OrderReceiptContent } from './OrderReceiptContent';
 
 interface OrderPrintViewProps {

@@ -5,18 +5,18 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Order } from '@/types/Order';
-import OrderPrintView from '@/components/orders/OrderPrintView';
+import OrderReceiptView from '@/components/orders/OrderPrintView';
 import { PrintStyle } from '@/components/orders/PrintStyle';
 import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface OrderPrintViewProps {
+interface OrderPrintDialogProps {
   order: Order | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const OrderPrintView: React.FC<OrderPrintViewProps> = ({ 
+export const OrderPrintView: React.FC<OrderPrintDialogProps> = ({ 
   order, 
   open, 
   onOpenChange 
@@ -80,7 +80,7 @@ export const OrderPrintView: React.FC<OrderPrintViewProps> = ({
           {order && (
             <>
               <div className="print-content">
-                <OrderPrintView order={order} />
+                <OrderReceiptView order={order} />
               </div>
               <div className="flex justify-center mt-4">
                 <Button onClick={handlePrint} className="flex items-center gap-2">
