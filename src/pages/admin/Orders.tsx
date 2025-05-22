@@ -48,6 +48,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn, formatPhone } from '@/lib/utils';
 import { MenuItem } from '@/types/MenuItem';
 import { animate } from '@/lib/animations';
+import { formatAddress, getBairroFromAddress } from '@/components/orders/utils/formatUtils';
 
 // Define the form schema
 const orderFormSchema = z.object({
@@ -333,49 +334,6 @@ const Orders = () => {
     return { orderAmount, deliveryFee, total };
   };
 
-  // Format address for display
-  const formatAddress = (address: Json | null): string => {
-    if (!address) return 'N/A';
-    
-    // Se for uma string, retorna diretamente
-    if (typeof address === 'string') return address;
-    
-    try {
-      // Se for um array de objetos no formato especificado
-      if (Array.isArray(address) && address.length > 0) {
-        const addressObj = address[0]; // Pega o primeiro item do array
-        
-        const parts = [];
-        if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
-        if (addressObj.Número) parts.push(addressObj.Número);
-        if (addressObj.Complemento && addressObj.Complemento.trim() !== '') 
-          parts.push(addressObj.Complemento);
-        
-        return parts.filter(Boolean).join(', ');
-      }
-      
-      // Se for um objeto com as propriedades antigas
-      if (typeof address === 'object') {
-        const addressObj = address as any;
-        
-        // Verificar se está usando o formato antigo (logradouro, numero, etc.)
-        if (addressObj.logradouro || addressObj.numero) {
-          const parts = [];
-          if (addressObj.logradouro) parts.push(addressObj.logradouro);
-          if (addressObj.numero) parts.push(addressObj.numero);
-          if (addressObj.complemento) parts.push(addressObj.complemento);
-          
-          return parts.filter(Boolean).join(', ');
-        }
-      }
-      
-      // Fallback: converter para string JSON
-      return JSON.stringify(address);
-    } catch (e) {
-      console.error("Erro ao formatar endereço:", e);
-      return String(address);
-    }
-  };
   
   return (
     <div className="space-y-6">

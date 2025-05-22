@@ -22,9 +22,9 @@ export const formatAddress = (address: Json | null): string => {
       const addressObj = address[0] as AddressFormat; // Pega o primeiro item do array
       
       const parts = [];
-      if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
-      if (addressObj.Número) parts.push(addressObj.Número);
-      if (addressObj.Complemento && addressObj.Complemento.trim() !== '') 
+      if (addressObj?.Logradouro) parts.push(addressObj.Logradouro);
+      if (addressObj?.Número) parts.push(addressObj.Número);
+      if (addressObj?.Complemento && addressObj.Complemento.trim() !== '') 
         parts.push(addressObj.Complemento);
       
       return parts.filter(Boolean).join(', ');
@@ -58,11 +58,12 @@ export const getBairroFromAddress = (address: Json | null): string => {
   
   try {
     if (Array.isArray(address) && address.length > 0) {
-      return address[0].Bairro || '';
+      const addressObj = address[0] as AddressFormat;
+      return addressObj?.Bairro || '';
     }
     if (typeof address === 'object') {
       const addressObj = address as any;
-      return addressObj.bairro || addressObj.Bairro || '';
+      return addressObj?.bairro || addressObj?.Bairro || '';
     }
   } catch (e) {
     console.error("Erro ao obter bairro:", e);

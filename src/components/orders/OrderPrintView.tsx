@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Order } from '@/types/Order';
+import { Order, AddressFormat } from '@/types/Order';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/types/MenuItem';
 import { OrderReceiptContent } from './OrderReceiptContent';
@@ -20,15 +20,16 @@ const formatAddress = (address: Json | null): string => {
   try {
     // Se for um array de objetos no formato especificado
     if (Array.isArray(address) && address.length > 0) {
-      const addressObj = address[0]; // Pega o primeiro item do array
+      const addressObj = address[0] as AddressFormat; // Pega o primeiro item do array
       
       const parts = [];
-      if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
-      if (addressObj.Número) parts.push(addressObj.Número);
-      if (addressObj.Complemento) parts.push(addressObj.Complemento);
-      if (addressObj.Bairro) parts.push(addressObj.Bairro);
-      if (addressObj.Localidade) parts.push(addressObj.Localidade);
-      if (addressObj.UF) parts.push(addressObj.UF);
+      if (addressObj?.Logradouro) parts.push(addressObj.Logradouro);
+      if (addressObj?.Número) parts.push(addressObj.Número);
+      if (addressObj?.Complemento && addressObj.Complemento.trim() !== '') 
+        parts.push(addressObj.Complemento);
+      if (addressObj?.Bairro) parts.push(addressObj.Bairro);
+      if (addressObj?.Localidade) parts.push(addressObj.Localidade);
+      if (addressObj?.UF) parts.push(addressObj.UF);
       
       return parts.filter(Boolean).join(', ');
     }
