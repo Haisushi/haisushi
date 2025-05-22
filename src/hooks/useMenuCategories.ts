@@ -2,24 +2,33 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { MenuCategory } from '@/types/MenuItem';
 
+// Since we don't use menu categories anymore, this hook is simplified
+// to just extract unique categories from menu items instead
 export const useMenuCategories = () => {
   const { supabase } = useAuth();
   const { toast } = useToast();
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('menu_categories')
-        .select('*')
-        .order('display_order');
+        .from('menu_items')
+        .select('category_name')
+        .not('category_name', 'is', null);
 
       if (error) throw error;
-      setCategories(data || []);
+      
+      // Extract unique category names
+      const uniqueCategories = Array.from(new Set(
+        data
+          .map(item => item.category_name)
+          .filter(Boolean) // Remove nulls
+      )) as string[];
+      
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
@@ -32,12 +41,6 @@ export const useMenuCategories = () => {
     }
   };
 
-  const getCategoryName = (categoryId: string | null | undefined) => {
-    if (!categoryId) return 'Sem categoria';
-    const category = categories.find(c => c.id === categoryId);
-    return category ? category.name : 'Categoria desconhecida';
-  };
-
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -45,7 +48,6 @@ export const useMenuCategories = () => {
   return {
     categories,
     loading,
-    fetchCategories,
-    getCategoryName
+    fetchCategories
   };
 };

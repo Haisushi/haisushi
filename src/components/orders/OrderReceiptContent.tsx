@@ -11,6 +11,36 @@ interface OrderReceiptContentProps {
 export const OrderReceiptContent = ({ order, orderItems }: OrderReceiptContentProps) => {
   const orderDate = formatOrderDate(order.created_at);
 
+  // Format the delivery address to handle both string and object formats
+  const formatAddress = (address: any): string => {
+    if (!address) return 'N/A';
+    
+    // If address is a string, return it directly
+    if (typeof address === 'string') return address;
+    
+    // If address is an object with address properties, format it
+    if (typeof address === 'object') {
+      const { logradouro, numero, complemento, bairro, localidade, uf } = address;
+      
+      const addressParts = [];
+      if (logradouro) addressParts.push(logradouro);
+      if (numero) addressParts.push(numero);
+      if (complemento) addressParts.push(complemento);
+      
+      let locationParts = [];
+      if (bairro) locationParts.push(bairro);
+      if (localidade && uf) locationParts.push(`${localidade} - ${uf}`);
+      
+      return [
+        addressParts.join(', '),
+        locationParts.join(', ')
+      ].filter(Boolean).join('. ');
+    }
+    
+    // Fallback: convert to string
+    return JSON.stringify(address);
+  };
+
   return (
     <div className="receipt bg-white">
       <div className="receipt-header">PEDIDO #{order.id.substring(0, 8)}</div>
@@ -22,7 +52,7 @@ export const OrderReceiptContent = ({ order, orderItems }: OrderReceiptContentPr
         <div><strong>Data:</strong> {orderDate}</div>
         <div><strong>Cliente:</strong> {order.customer_name || 'N/A'}</div>
         <div><strong>Telefone:</strong> {formatPhone(order.customer_phone)}</div>
-        <div><strong>Endereço:</strong> {order.delivery_address || 'N/A'}</div>
+        <div><strong>Endereço:</strong> {formatAddress(order.delivery_address)}</div>
         <div><strong>Bairro:</strong> {order.bairro || 'N/A'}</div>
       </div>
       

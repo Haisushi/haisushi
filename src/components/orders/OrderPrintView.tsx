@@ -15,6 +15,8 @@ const OrderPrintView = ({ order }: OrderPrintViewProps) => {
   
   useEffect(() => {
     const loadOrderItems = async () => {
+      if (!order) return;
+      
       try {
         // Parse order items from JSON if it's a string
         const items = typeof order.items === 'string' 
@@ -54,7 +56,9 @@ const OrderPrintView = ({ order }: OrderPrintViewProps) => {
     };
     
     loadOrderItems();
-  }, [order.items]);
+  }, [order?.items]);
+
+  if (!order) return null;
 
   return (
     <div className="p-4 bg-white">

@@ -1,13 +1,14 @@
 
-import { useState, useRef } from 'react';
+import React from 'react';
+import { 
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { Order } from '@/types/Order';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Printer } from 'lucide-react';
+import OrderPrintView from '@/components/orders/OrderPrintView';
 import { PrintStyle } from '@/components/orders/PrintStyle';
-import { OrderReceiptContent } from '@/components/orders/OrderReceiptContent';
-import { useOrderItems } from '@/components/orders/hooks/useOrderItems';
+import { Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface OrderPrintViewProps {
   order: Order | null;
@@ -15,63 +16,82 @@ interface OrderPrintViewProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const OrderPrintView = ({ order, open, onOpenChange }: OrderPrintViewProps) => {
-  const { toast } = useToast();
-  const printRef = useRef<HTMLDivElement>(null);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const { orderItems } = useOrderItems(order);
-
-  if (!order) return null;
-
+export const OrderPrintView: React.FC<OrderPrintViewProps> = ({ 
+  order, 
+  open, 
+  onOpenChange 
+}) => {
   const handlePrint = () => {
-    setIsPrinting(true);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !order) return;
     
-    setTimeout(() => {
-      try {
-        window.print();
-        toast({
-          title: "Impressão iniciada",
-          description: "O pedido foi enviado para impressão.",
-        });
-      } catch (error) {
-        toast({
-          title: "Erro na impressão",
-          description: "Não foi possível enviar para impressão.",
-          variant: "destructive",
-        });
-        console.error("Print error:", error);
-      } finally {
-        setIsPrinting(false);
+    // Add print styles
+    printWindow.document.write('<html><head><title>Pedido #' + order.id?.substring(0, 8) + '</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write(`
+      @media print {
+        @page { size: 80mm 297mm; margin: 0; }
+        body { font-family: Arial, sans-serif; margin: 10px; font-size: 12px; }
+        .receipt { width: 100%; }
+        .receipt-header { font-size: 16px; text-align: center; font-weight: bold; margin-bottom: 5px; }
+        .receipt-subheader { font-size: 12px; text-align: center; margin-bottom: 10px; }
+        .receipt-line { border-top: 1px dashed #000; margin: 10px 0; }
+        .receipt-info { margin-bottom: 10px; }
+        .receipt-info div { margin-bottom: 3px; }
+        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .receipt-total { display: flex; justify-content: space-between; font-weight: bold; margin: 5px 0; }
+        .receipt-footer { text-align: center; margin-top: 10px; font-size: 10px; }
       }
-    }, 100);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Impressão de Pedido #{order.id.substring(0, 8)}</DialogTitle>
-        </DialogHeader>
-        
-        <PrintStyle />
-        
-        <div className="max-h-[70vh] overflow-auto border rounded p-4">
-          <div ref={printRef}>
-            <OrderReceiptContent order={order} orderItems={orderItems} />
+    `);
+    printWindow.document.write('</style></head><body>');
+    
+    // Clone our receipt content into the print window
+    const printContent = document.querySelector('.receipt')?.cloneNode(true);
+    if (printContent) {
+      printWindow.document.body.appendChild(printContent);
+    } else {
+      // Fallback content if we couldn't clone the receipt
+      printWindow.document.write(`
+        <div class="receipt">
+          <div class="receipt-header">PEDIDO #${order.id?.substring(0, 8)}</div>
+          <div class="receipt-line"></div>
+          <div class="receipt-info">
+            <div><strong>Não foi possível gerar o recibo</strong></div>
           </div>
         </div>
-        
-        <div className="flex justify-center mt-4">
-          <Button 
-            onClick={handlePrint} 
-            disabled={isPrinting} 
-            className="print-button bg-restaurant-primary hover:bg-restaurant-primary/90"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            {isPrinting ? "Imprimindo..." : "Imprimir Pedido"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      `);
+    }
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    
+    // Wait a bit for content to load before printing
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+  
+  return (
+    <>
+      <PrintStyle />
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[400px]">
+          {order && (
+            <>
+              <div className="print-content">
+                <OrderPrintView order={order} />
+              </div>
+              <div className="flex justify-center mt-4">
+                <Button onClick={handlePrint} className="flex items-center gap-2">
+                  <Printer className="h-4 w-4" />
+                  Imprimir
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

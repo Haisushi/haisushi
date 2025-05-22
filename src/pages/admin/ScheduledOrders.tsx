@@ -176,6 +176,34 @@ const ScheduledOrders = () => {
     }
   };
 
+  // Format address for display
+  const formatAddress = (address: any): string => {
+    if (!address) return 'N/A';
+    
+    // If address is a string, return it directly
+    if (typeof address === 'string') return address;
+    
+    // If address is an object with address properties, format it
+    if (typeof address === 'object') {
+      try {
+        const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
+        const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj;
+        
+        const addressParts = [];
+        if (logradouro) addressParts.push(logradouro);
+        if (numero) addressParts.push(numero);
+        if (complemento) addressParts.push(complemento);
+        
+        return addressParts.filter(Boolean).join(', ');
+      } catch (e) {
+        return JSON.stringify(address);
+      }
+    }
+    
+    // Fallback: convert to string
+    return String(address);
+  };
+
   // Calculate totals
   const calculateTotal = (order: Order) => {
     let orderAmount = order.order_amount || 0;
@@ -281,7 +309,10 @@ const ScheduledOrders = () => {
                         <TableCell className="max-w-[200px] truncate">
                           {formatItems(order.items)}
                         </TableCell>
-                        <TableCell>{order.delivery_address || 'N/A'} {order.bairro ? `- ${order.bairro}` : ''}</TableCell>
+                        <TableCell>
+                          {formatAddress(order.delivery_address)} 
+                          {order.bairro ? `- ${order.bairro}` : ''}
+                        </TableCell>
                         <TableCell>
                           <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md font-medium">
                             {order.scheduled_date ? formatDate(order.scheduled_date) : 'N/A'}

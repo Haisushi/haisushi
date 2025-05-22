@@ -30,9 +30,8 @@ export type Database = {
       menu_items: {
         Row: {
           category_name: string | null
-          description: string | null
+          description: string
           display_order: number
-          embedding: string | null
           id: string
           is_available: boolean | null
           name: string
@@ -40,9 +39,8 @@ export type Database = {
         }
         Insert: {
           category_name?: string | null
-          description?: string | null
+          description: string
           display_order?: number
-          embedding?: string | null
           id?: string
           is_available?: boolean | null
           name: string
@@ -50,9 +48,8 @@ export type Database = {
         }
         Update: {
           category_name?: string | null
-          description?: string | null
+          description?: string
           display_order?: number
-          embedding?: string | null
           id?: string
           is_available?: boolean | null
           name?: string
@@ -90,7 +87,7 @@ export type Database = {
           created_at: string | null
           customer_name: string | null
           customer_phone: string | null
-          delivery_address: string | null
+          delivery_address: Json | null
           delivery_fee: number | null
           id: string
           items: Json
@@ -103,7 +100,7 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
-          delivery_address?: string | null
+          delivery_address?: Json | null
           delivery_fee?: number | null
           id?: string
           items: Json
@@ -116,7 +113,7 @@ export type Database = {
           created_at?: string | null
           customer_name?: string | null
           customer_phone?: string | null
-          delivery_address?: string | null
+          delivery_address?: Json | null
           delivery_fee?: number | null
           id?: string
           items?: Json

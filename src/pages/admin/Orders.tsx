@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -332,6 +331,34 @@ const Orders = () => {
     }
     
     return { orderAmount, deliveryFee, total };
+  };
+
+  // Format address for display
+  const formatAddress = (address: any): string => {
+    if (!address) return 'N/A';
+    
+    // If address is a string, return it directly
+    if (typeof address === 'string') return address;
+    
+    // If address is an object with address properties, format it
+    if (typeof address === 'object') {
+      try {
+        const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
+        const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj;
+        
+        const addressParts = [];
+        if (logradouro) addressParts.push(logradouro);
+        if (numero) addressParts.push(numero);
+        if (complemento) addressParts.push(complemento);
+        
+        return addressParts.filter(Boolean).join(', ');
+      } catch (e) {
+        return JSON.stringify(address);
+      }
+    }
+    
+    // Fallback: convert to string
+    return String(address);
   };
 
   return (
