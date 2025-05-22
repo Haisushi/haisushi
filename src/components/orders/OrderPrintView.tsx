@@ -14,28 +14,47 @@ interface OrderPrintViewProps {
 const formatAddress = (address: Json | null): string => {
   if (!address) return 'N/A';
   
-  // If address is a string, return it directly
+  // Se for uma string, retorna diretamente
   if (typeof address === 'string') return address;
   
-  // If address is an object with address properties, format it
-  if (typeof address === 'object') {
-    try {
-      const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
-      const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj as any;
+  try {
+    // Se for um array de objetos no formato especificado
+    if (Array.isArray(address) && address.length > 0) {
+      const addressObj = address[0]; // Pega o primeiro item do array
       
-      const addressParts = [];
-      if (logradouro) addressParts.push(logradouro);
-      if (numero) addressParts.push(numero);
-      if (complemento) addressParts.push(complemento);
+      const parts = [];
+      if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
+      if (addressObj.Número) parts.push(addressObj.Número);
+      if (addressObj.Complemento) parts.push(addressObj.Complemento);
+      if (addressObj.Bairro) parts.push(addressObj.Bairro);
+      if (addressObj.Localidade) parts.push(addressObj.Localidade);
+      if (addressObj.UF) parts.push(addressObj.UF);
       
-      return addressParts.filter(Boolean).join(', ');
-    } catch (e) {
-      return JSON.stringify(address);
+      return parts.filter(Boolean).join(', ');
     }
+    
+    // Se for um objeto com as propriedades antigas
+    if (typeof address === 'object') {
+      const addressObj = address as any;
+      
+      // Verificar se está usando o formato antigo (logradouro, numero, etc.)
+      if (addressObj.logradouro || addressObj.numero) {
+        const parts = [];
+        if (addressObj.logradouro) parts.push(addressObj.logradouro);
+        if (addressObj.numero) parts.push(addressObj.numero);
+        if (addressObj.complemento) parts.push(addressObj.complemento);
+        if (addressObj.bairro) parts.push(addressObj.bairro);
+        
+        return parts.filter(Boolean).join(', ');
+      }
+    }
+    
+    // Fallback: converter para string JSON
+    return JSON.stringify(address);
+  } catch (e) {
+    console.error("Erro ao formatar endereço:", e);
+    return String(address);
   }
-  
-  // Fallback: convert to string
-  return String(address);
 };
 
 const OrderPrintView = ({ order }: OrderPrintViewProps) => {

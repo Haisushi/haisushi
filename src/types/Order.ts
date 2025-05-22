@@ -16,6 +16,16 @@ export type Order = {
   scheduled_date?: string | null;
 };
 
+export type AddressFormat = {
+  UF: string;
+  CEP: string;
+  Bairro: string;
+  Localidade: string;
+  Logradouro: string;
+  Número: string;
+  Complemento: string;
+};
+
 export type OrderFormValues = {
   customer_name: string;
   customer_phone: string;
