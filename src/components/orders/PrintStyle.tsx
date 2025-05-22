@@ -24,6 +24,12 @@ export const PrintStyle = () => {
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
+          font-size: 12pt;
+        }
+        
+        .receipt {
+          max-width: 100%;
+          width: 100%;
         }
       }
       

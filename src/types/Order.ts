@@ -26,6 +26,16 @@ export type AddressFormat = {
   Complemento: string;
 };
 
+// New address format to support the alternative structure
+export type NewAddressFormat = {
+  uf: string;
+  CEP: string;
+  bairro: string;
+  cidade: string;
+  endereco: string;
+  numero: string;
+};
+
 export type OrderFormValues = {
   customer_name: string;
   customer_phone: string;
