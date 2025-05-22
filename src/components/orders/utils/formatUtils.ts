@@ -53,7 +53,7 @@ export const formatAddress = (address: Json | null): string => {
         const parts = [];
         if (oldFormat?.Logradouro) parts.push(oldFormat.Logradouro);
         if (oldFormat?.Número) parts.push(oldFormat.Número);
-        if (oldFormat?.Complemento && oldFormat.Complemento.trim() !== '') 
+        if (oldFormat?.Complemento && typeof oldFormat.Complemento === 'string' && oldFormat.Complemento.trim() !== '') 
           parts.push(oldFormat.Complemento);
         
         return parts.filter(Boolean).join(', ');
@@ -71,7 +71,8 @@ export const formatAddress = (address: Json | null): string => {
         if (addressObj.endereco) parts.push(addressObj.endereco);
         if (addressObj.numero || addressObj.número) 
           parts.push(addressObj.numero || addressObj.número);
-        if (addressObj.complemento) parts.push(addressObj.complemento);
+        if (addressObj.complemento && typeof addressObj.complemento === 'string') 
+          parts.push(addressObj.complemento);
         
         return parts.filter(Boolean).join(', ');
       }
@@ -143,7 +144,7 @@ export const formatFullAddress = (address: Json | null): string => {
       if (addressObj && typeof addressObj === 'object' && 'Logradouro' in addressObj && 'Número' in addressObj) {
         if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
         if (addressObj.Número) parts.push(addressObj.Número);
-        if (addressObj.Complemento && addressObj.Complemento.trim() !== '') 
+        if (addressObj.Complemento && typeof addressObj.Complemento === 'string' && addressObj.Complemento.trim() !== '') 
           parts.push(addressObj.Complemento);
         
         // Add city and state from old format
