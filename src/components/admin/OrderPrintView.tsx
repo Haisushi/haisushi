@@ -9,6 +9,7 @@ import OrderReceiptView from '@/components/orders/OrderPrintView';
 import { PrintStyle } from '@/components/orders/PrintStyle';
 import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/ui/use-toast";
 
 interface OrderPrintDialogProps {
   order: Order | null;
@@ -21,7 +22,19 @@ export const OrderPrintView: React.FC<OrderPrintDialogProps> = ({
   open, 
   onOpenChange 
 }) => {
+  const { toast } = useToast();
+  
   const handlePrint = () => {
+    // Tentar usar a impressora configurada
+    const defaultPrinter = localStorage.getItem('defaultPrinter');
+    
+    if (defaultPrinter) {
+      toast({
+        title: "Imprimindo",
+        description: `Enviando para impressora: ${defaultPrinter}`,
+      });
+    }
+    
     window.print();
   };
   

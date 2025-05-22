@@ -43,6 +43,7 @@ import * as z from 'zod';
 import { Order, OrderFormValues, statusBadge, statusLabel } from '@/types/Order';
 import { Json } from '@/integrations/supabase/types';
 import { OrderPrintView } from '@/components/admin/OrderPrintView';
+import { PrinterConfigDialog } from '@/components/orders/PrinterConfigDialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, formatPhone } from '@/lib/utils';
@@ -83,6 +84,7 @@ const Orders = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -333,15 +335,25 @@ const Orders = () => {
     
     return { orderAmount, deliveryFee, total };
   };
-
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Pedidos</h1>
-        <Button onClick={openCreateDialog} className="bg-restaurant-primary hover:bg-restaurant-primary/90">
-          <Plus className="mr-2 h-4 w-4" /> Novo Pedido (Teste)
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsPrinterConfigOpen(true)}
+            className="flex items-center gap-2"
+            title="Configurar Impressora"
+          >
+            <Printer className="h-4 w-4" />
+            Configurar Impressora
+          </Button>
+          <Button onClick={openCreateDialog} className="bg-restaurant-primary hover:bg-restaurant-primary/90">
+            <Plus className="mr-2 h-4 w-4" /> Novo Pedido (Teste)
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -731,6 +743,12 @@ const Orders = () => {
         order={currentOrder} 
         open={isPrintViewOpen} 
         onOpenChange={setIsPrintViewOpen}
+      />
+
+      {/* Printer Configuration Dialog */}
+      <PrinterConfigDialog 
+        open={isPrinterConfigOpen}
+        onOpenChange={setIsPrinterConfigOpen}
       />
     </div>
   );
