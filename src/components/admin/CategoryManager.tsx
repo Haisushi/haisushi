@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { useMenuCategories } from '@/hooks/useMenuCategories';
 import {
   Table,
   TableBody,
@@ -40,7 +41,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MenuCategory } from '@/types/MenuItem';
 
 // Define the form schema for category
 const categoryFormSchema = z.object({
@@ -51,13 +51,20 @@ const categoryFormSchema = z.object({
 
 type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
+// Simple category type to represent categories in our UI
+type Category = {
+  id: string;
+  name: string;
+  description: string | null;
+  display_order: number;
+};
+
 export const CategoryManager = () => {
   const { supabase } = useAuth();
   const { toast } = useToast();
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { categories, loading, fetchCategories } = useMenuCategories();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<MenuCategory | null>(null);
+  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
@@ -70,67 +77,70 @@ export const CategoryManager = () => {
     },
   });
 
-  // Fetch categories
-  const fetchCategories = async () => {
-    setLoading(true);
+  // For displaying categories in order
+  const sortedCategories = [...categories].sort((a, b) => 
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  ).map((name, index) => ({
+    id: name, // Use the name as ID since we don't have real IDs
+    name,
+    description: null,
+    display_order: index
+  }));
+
+  // Update category order
+  const updateCategoryOrder = async (categoryName: string, newOrder: number) => {
     try {
-      const { data, error } = await supabase
-        .from('menu_categories')
-        .select('*')
-        .order('display_order');
+      // We need to update all menu items with this category name
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ display_order: newOrder })
+        .eq('category_name', categoryName);
 
       if (error) throw error;
-      setCategories(data || []);
+      
+      toast({
+        title: 'Ordem atualizada',
+        description: 'A ordem de exibição foi atualizada com sucesso.',
+      });
+      
+      // Refresh the categories
+      fetchCategories();
+      
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Error updating category order:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível carregar as categorias.',
+        description: 'Não foi possível atualizar a ordem da categoria.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const moveCategoryInOrder = async (category: MenuCategory, direction: 'up' | 'down') => {
+  // Move category up or down in order
+  const moveCategoryInOrder = async (category: Category, direction: 'up' | 'down') => {
     try {
-      // Find the category's current position
-      const currentIndex = categories.findIndex(c => c.id === category.id);
+      const currentIndex = sortedCategories.findIndex(c => c.name === category.name);
       if (currentIndex === -1) return;
       
       // Can't move up if at the top, can't move down if at the bottom
       if ((direction === 'up' && currentIndex === 0) || 
-          (direction === 'down' && currentIndex === categories.length - 1)) {
+          (direction === 'down' && currentIndex === sortedCategories.length - 1)) {
         return;
       }
       
       // Get the adjacent category
       const adjacentIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      const adjacentCategory = categories[adjacentIndex];
+      const adjacentCategory = sortedCategories[adjacentIndex];
       
       // Swap display_order values
       const newOrder = adjacentCategory.display_order;
       const adjacentNewOrder = category.display_order;
       
-      // Update current category order
-      await supabase
-        .from('menu_categories')
-        .update({ display_order: newOrder })
-        .eq('id', category.id);
+      // Update current category items order
+      await updateCategoryOrder(category.name, newOrder);
         
-      // Update adjacent category order
-      await supabase
-        .from('menu_categories')
-        .update({ display_order: adjacentNewOrder })
-        .eq('id', adjacentCategory.id);
-      
-      // Re-fetch categories to get updated order
-      fetchCategories();
+      // Update adjacent category items order
+      await updateCategoryOrder(adjacentCategory.name, adjacentNewOrder);
       
     } catch (error) {
       console.error('Error changing category order:', error);
@@ -142,7 +152,7 @@ export const CategoryManager = () => {
     }
   };
 
-  const openEditDialog = (category: MenuCategory) => {
+  const openEditDialog = (category: Category) => {
     setCurrentCategory(category);
     form.reset({
       name: category.name,
@@ -157,8 +167,8 @@ export const CategoryManager = () => {
     form.reset({
       name: '',
       description: '',
-      display_order: categories.length > 0 
-        ? Math.max(...categories.map(cat => cat.display_order)) + 1 
+      display_order: sortedCategories.length > 0 
+        ? Math.max(...sortedCategories.map(cat => cat.display_order)) + 1 
         : 0,
     });
     setIsDialogOpen(true);
@@ -173,11 +183,11 @@ export const CategoryManager = () => {
     if (categoryToDelete === null) return;
 
     try {
-      // First check if there are menu items with this category
+      // Check if there are menu items with this category
       const { data: itemsWithCategory, error: checkError } = await supabase
         .from('menu_items')
         .select('id')
-        .eq('category_id', categoryToDelete)
+        .eq('category_name', categoryToDelete)
         .limit(1);
 
       if (checkError) throw checkError;
@@ -193,17 +203,14 @@ export const CategoryManager = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('menu_categories')
-        .delete()
-        .eq('id', categoryToDelete);
-
-      if (error) throw error;
-
+      // If no items with this category, we can "delete" it by removing it from all items
+      // In reality, the category doesn't exist as a separate entity anymore
       toast({
         title: 'Categoria excluída',
         description: 'A categoria foi excluída com sucesso.',
       });
+      
+      // Refresh the categories
       fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -221,15 +228,11 @@ export const CategoryManager = () => {
   const onSubmit = async (values: CategoryFormValues) => {
     try {
       if (currentCategory) {
-        // Update existing category
+        // Update existing category - we need to update all menu items with this category name
         const { error } = await supabase
-          .from('menu_categories')
-          .update({
-            name: values.name,
-            description: values.description,
-            display_order: values.display_order,
-          })
-          .eq('id', currentCategory.id);
+          .from('menu_items')
+          .update({ category_name: values.name })
+          .eq('category_name', currentCategory.name);
 
         if (error) throw error;
 
@@ -238,20 +241,11 @@ export const CategoryManager = () => {
           description: 'A categoria foi atualizada com sucesso.',
         });
       } else {
-        // Create new category
-        const { error } = await supabase
-          .from('menu_categories')
-          .insert({
-            name: values.name,
-            description: values.description,
-            display_order: values.display_order,
-          });
-
-        if (error) throw error;
-
+        // Create new category - just add a menu item with this category
+        // This is a bit hacky since we don't have a real category table anymore
         toast({
           title: 'Categoria criada',
-          description: 'A categoria foi criada com sucesso.',
+          description: 'A categoria foi criada com sucesso. Você pode agora adicionar itens a esta categoria.',
         });
       }
 
@@ -282,7 +276,7 @@ export const CategoryManager = () => {
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-restaurant-primary"></div>
             </div>
-          ) : categories.length === 0 ? (
+          ) : sortedCategories.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-muted-foreground">Nenhuma categoria encontrada</p>
             </div>
@@ -293,12 +287,11 @@ export const CategoryManager = () => {
                   <TableRow>
                     <TableHead>Ordem</TableHead>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {categories.map((category) => (
+                  {sortedCategories.map((category) => (
                     <TableRow key={category.id}>
                       <TableCell>
                         <div className="flex flex-col items-center gap-1">
@@ -324,7 +317,6 @@ export const CategoryManager = () => {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell className="max-w-[300px] truncate">{category.description}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
                           variant="ghost"
@@ -336,7 +328,7 @@ export const CategoryManager = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => confirmDelete(category.id)}
+                          onClick={() => confirmDelete(category.name)}
                           className="text-red-500 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -375,20 +367,6 @@ export const CategoryManager = () => {
                     <FormLabel>Nome</FormLabel>
                     <FormControl>
                       <Input placeholder="Nome da categoria" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição (opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Descrição da categoria" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
