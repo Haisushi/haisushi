@@ -1,6 +1,7 @@
 
 import { Order } from '@/types/Order';
 import { formatCurrency, formatOrderDate, formatAddress, getBairroFromAddress, formatFullAddress } from './utils/formatUtils';
+import { formatPhone } from '@/lib/utils';
 
 interface OrderReceiptContentProps {
   order: Order;
@@ -25,7 +26,7 @@ export const OrderReceiptContent: React.FC<OrderReceiptContentProps> = ({ order,
       <div className="receipt-info">
         <h3>Informações do Cliente</h3>
         <p><strong>Nome:</strong> {order.customer_name || 'N/A'}</p>
-        <p><strong>Telefone:</strong> {order.customer_phone || 'N/A'}</p>
+        <p><strong>Telefone:</strong> {formatPhone(order.customer_phone)}</p>
         <p><strong>Endereço:</strong> {formatFullAddress(order.delivery_address)}</p>
         <p><strong>Bairro:</strong> {order.bairro || getBairroFromAddress(order.delivery_address) || 'N/A'}</p>
       </div>
