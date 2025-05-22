@@ -36,8 +36,8 @@ export const formatAddress = (address: Json | null): string => {
       const addressObj = address[0];
       
       // Check for new address format (endereco, numero)
-      if ('endereco' in addressObj && 'numero' in addressObj) {
-        const newFormat = addressObj as NewAddressFormat;
+      if (addressObj && typeof addressObj === 'object' && 'endereco' in addressObj && 'numero' in addressObj) {
+        const newFormat = addressObj as unknown as NewAddressFormat;
         
         const parts = [];
         if (newFormat?.endereco) parts.push(newFormat.endereco);
@@ -47,8 +47,8 @@ export const formatAddress = (address: Json | null): string => {
       }
       
       // Check for old address format (Logradouro, Número)
-      if ('Logradouro' in addressObj && 'Número' in addressObj) {
-        const oldFormat = addressObj as AddressFormat;
+      if (addressObj && typeof addressObj === 'object' && 'Logradouro' in addressObj && 'Número' in addressObj) {
+        const oldFormat = addressObj as unknown as AddressFormat;
         
         const parts = [];
         if (oldFormat?.Logradouro) parts.push(oldFormat.Logradouro);
@@ -61,7 +61,7 @@ export const formatAddress = (address: Json | null): string => {
     }
     
     // Se for um objeto com as propriedades antigas (logradouro, numero)
-    if (typeof address === 'object') {
+    if (address && typeof address === 'object' && !Array.isArray(address)) {
       const addressObj = address as any;
       
       // Verificar formato antigo (logradouro, numero)
@@ -93,22 +93,22 @@ export const getBairroFromAddress = (address: Json | null): string => {
   
   try {
     if (Array.isArray(address) && address.length > 0) {
-      const addressObj = address[0] as any;
+      const addressObj = address[0];
       
       // Check new format (bairro)
-      if (addressObj?.bairro) {
-        return addressObj.bairro;
+      if (addressObj && typeof addressObj === 'object' && 'bairro' in addressObj) {
+        return addressObj.bairro as string;
       }
       
       // Check old format (Bairro)
-      if (addressObj?.Bairro) {
-        return addressObj.Bairro;
+      if (addressObj && typeof addressObj === 'object' && 'Bairro' in addressObj) {
+        return addressObj.Bairro as string;
       }
     }
     
-    if (typeof address === 'object') {
+    if (address && typeof address === 'object' && !Array.isArray(address)) {
       const addressObj = address as any;
-      return addressObj?.bairro || addressObj?.Bairro || '';
+      return (addressObj?.bairro || addressObj?.Bairro || '') as string;
     }
   } catch (e) {
     console.error("Erro ao obter bairro:", e);
@@ -124,11 +124,11 @@ export const formatFullAddress = (address: Json | null): string => {
   
   try {
     if (Array.isArray(address) && address.length > 0) {
-      const addressObj = address[0] as any;
+      const addressObj = address[0];
       
       const parts = [];
       // Format for new address format
-      if ('endereco' in addressObj && 'numero' in addressObj) {
+      if (addressObj && typeof addressObj === 'object' && 'endereco' in addressObj && 'numero' in addressObj) {
         if (addressObj.endereco) parts.push(addressObj.endereco);
         if (addressObj.numero) parts.push(addressObj.numero);
         
@@ -140,7 +140,7 @@ export const formatFullAddress = (address: Json | null): string => {
       }
       
       // Format for old address format
-      if ('Logradouro' in addressObj && 'Número' in addressObj) {
+      if (addressObj && typeof addressObj === 'object' && 'Logradouro' in addressObj && 'Número' in addressObj) {
         if (addressObj.Logradouro) parts.push(addressObj.Logradouro);
         if (addressObj.Número) parts.push(addressObj.Número);
         if (addressObj.Complemento && addressObj.Complemento.trim() !== '') 
@@ -160,4 +160,3 @@ export const formatFullAddress = (address: Json | null): string => {
     return formatAddress(address);
   }
 };
-
