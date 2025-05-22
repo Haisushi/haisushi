@@ -11,7 +11,7 @@ export type Order = {
   total_amount: number | null;
   status: string | null;
   created_at: string | null;
-  delivery_address?: string | null;
+  delivery_address: Json | null;
   bairro?: string | null;
   scheduled_date?: string | null;
 };

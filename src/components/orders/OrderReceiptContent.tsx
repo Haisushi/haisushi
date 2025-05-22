@@ -1,98 +1,87 @@
-
 import { Order } from '@/types/Order';
-import { formatPhone } from '@/lib/utils';
-import { formatCurrency, formatOrderDate } from './utils/formatUtils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Json } from '@/integrations/supabase/types';
 
 interface OrderReceiptContentProps {
   order: Order;
   orderItems: any[];
 }
 
-export const OrderReceiptContent = ({ order, orderItems }: OrderReceiptContentProps) => {
-  const orderDate = formatOrderDate(order.created_at);
-
-  // Format the delivery address to handle both string and object formats
-  const formatAddress = (address: any): string => {
-    if (!address) return 'N/A';
-    
-    // If address is a string, return it directly
-    if (typeof address === 'string') return address;
-    
-    // If address is an object with address properties, format it
-    if (typeof address === 'object') {
-      const { logradouro, numero, complemento, bairro, localidade, uf } = address;
+// Helper function to format address for display
+export const formatAddress = (address: Json | null): string => {
+  if (!address) return 'N/A';
+  
+  // If address is a string, return it directly
+  if (typeof address === 'string') return address;
+  
+  // If address is an object with address properties, format it
+  if (typeof address === 'object') {
+    try {
+      const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
+      const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj as any;
       
       const addressParts = [];
       if (logradouro) addressParts.push(logradouro);
       if (numero) addressParts.push(numero);
       if (complemento) addressParts.push(complemento);
       
-      let locationParts = [];
-      if (bairro) locationParts.push(bairro);
-      if (localidade && uf) locationParts.push(`${localidade} - ${uf}`);
-      
-      return [
-        addressParts.join(', '),
-        locationParts.join(', ')
-      ].filter(Boolean).join('. ');
+      return addressParts.filter(Boolean).join(', ');
+    } catch (e) {
+      return JSON.stringify(address);
     }
-    
-    // Fallback: convert to string
-    return JSON.stringify(address);
+  }
+  
+  // Fallback: convert to string
+  return String(address);
+};
+
+export const OrderReceiptContent: React.FC<OrderReceiptContentProps> = ({ order, orderItems }) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    return format(new Date(dateString), 'dd/MM/yyyy HH:mm', { locale: ptBR });
   };
 
   return (
-    <div className="receipt bg-white">
-      <div className="receipt-header">PEDIDO #{order.id.substring(0, 8)}</div>
-      <div className="receipt-subheader">PEDIDO PARA DELIVERY</div>
-      
-      <div className="receipt-line"></div>
-      
-      <div className="receipt-info">
-        <div><strong>Data:</strong> {orderDate}</div>
-        <div><strong>Cliente:</strong> {order.customer_name || 'N/A'}</div>
-        <div><strong>Telefone:</strong> {formatPhone(order.customer_phone)}</div>
-        <div><strong>Endereço:</strong> {formatAddress(order.delivery_address)}</div>
-        <div><strong>Bairro:</strong> {order.bairro || 'N/A'}</div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Recibo do Pedido</h1>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Detalhes do Cliente</h2>
+        <p><strong>Nome:</strong> {order.customer_name || 'N/A'}</p>
+        <p><strong>Telefone:</strong> {order.customer_phone || 'N/A'}</p>
+        <p><strong>Endereço de Entrega:</strong> {formatAddress(order.delivery_address)}</p>
+        <p><strong>Bairro:</strong> {order.bairro || 'N/A'}</p>
       </div>
-      
-      <div className="receipt-line"></div>
-      
-      <div>
-        <div><strong>ITENS DO PEDIDO:</strong></div>
-        {orderItems.length > 0 ? (
-          orderItems.map((item: any, index: number) => (
-            <div key={index} className="receipt-item">
-              <div>{item.quantity}x {item.name}</div>
-              <div>{formatCurrency(item.subtotal)}</div>
-            </div>
-          ))
-        ) : (
-          <div>Carregando itens...</div>
-        )}
+
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Detalhes do Pedido</h2>
+        <p><strong>ID do Pedido:</strong> {order.id}</p>
+        <p><strong>Data/Hora do Pedido:</strong> {formatDate(order.created_at)}</p>
+        <p><strong>Status:</strong> {order.status}</p>
       </div>
-      
-      <div className="receipt-line"></div>
-      
-      <div className="receipt-total">
-        <div>Subtotal:</div>
-        <div>{formatCurrency(order.order_amount)}</div>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Itens do Pedido</h2>
+        <ul>
+          {orderItems.map((item) => (
+            <li key={item.id} className="flex justify-between">
+              <span>{item.name} ({item.quantity}x)</span>
+              <span>R$ {item.subtotal?.toFixed(2) || '0.00'}</span>
+            </li>
+          ))}
+        </ul>
       </div>
-      
-      <div className="receipt-total">
-        <div>Taxa de entrega:</div>
-        <div>{formatCurrency(order.delivery_fee)}</div>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Valores</h2>
+        <p><strong>Subtotal:</strong> R$ {order.order_amount?.toFixed(2) || '0.00'}</p>
+        <p><strong>Taxa de Entrega:</strong> R$ {order.delivery_fee?.toFixed(2) || '0.00'}</p>
+        <p><strong>Total:</strong> R$ {order.total_amount?.toFixed(2) || '0.00'}</p>
       </div>
-      
-      <div className="receipt-total">
-        <div>TOTAL:</div>
-        <div>{formatCurrency(order.total_amount)}</div>
-      </div>
-      
-      <div className="receipt-line"></div>
-      
-      <div className="receipt-footer">
-        Obrigado pela preferência!
+
+      <div className="text-center mt-8">
+        <p>Obrigado pelo seu pedido!</p>
       </div>
     </div>
   );

@@ -4,10 +4,39 @@ import { Order } from '@/types/Order';
 import { supabase } from '@/integrations/supabase/client';
 import { MenuItem } from '@/types/MenuItem';
 import { OrderReceiptContent } from './OrderReceiptContent';
+import { Json } from '@/integrations/supabase/types';
 
 interface OrderPrintViewProps {
   order: Order;
 }
+
+// Helper function to format address for display
+const formatAddress = (address: Json | null): string => {
+  if (!address) return 'N/A';
+  
+  // If address is a string, return it directly
+  if (typeof address === 'string') return address;
+  
+  // If address is an object with address properties, format it
+  if (typeof address === 'object') {
+    try {
+      const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
+      const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj as any;
+      
+      const addressParts = [];
+      if (logradouro) addressParts.push(logradouro);
+      if (numero) addressParts.push(numero);
+      if (complemento) addressParts.push(complemento);
+      
+      return addressParts.filter(Boolean).join(', ');
+    } catch (e) {
+      return JSON.stringify(address);
+    }
+  }
+  
+  // Fallback: convert to string
+  return String(address);
+};
 
 const OrderPrintView = ({ order }: OrderPrintViewProps) => {
   const [orderItems, setOrderItems] = useState<any[]>([]);

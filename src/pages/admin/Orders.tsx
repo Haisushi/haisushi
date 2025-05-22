@@ -334,7 +334,7 @@ const Orders = () => {
   };
 
   // Format address for display
-  const formatAddress = (address: any): string => {
+  const formatAddress = (address: Json | null): string => {
     if (!address) return 'N/A';
     
     // If address is a string, return it directly
@@ -344,7 +344,7 @@ const Orders = () => {
     if (typeof address === 'object') {
       try {
         const addressObj = typeof address === 'string' ? JSON.parse(address) : address;
-        const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj;
+        const { logradouro, numero, complemento, bairro, localidade, uf } = addressObj as any;
         
         const addressParts = [];
         if (logradouro) addressParts.push(logradouro);
@@ -360,7 +360,7 @@ const Orders = () => {
     // Fallback: convert to string
     return String(address);
   };
-
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
