@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -12,6 +11,7 @@ import {
   ScrollText,
   Settings,
   User,
+  Users,
 } from 'lucide-react';
 
 const sidebarItems = [
@@ -31,9 +31,14 @@ const sidebarItems = [
     icon: Clock,
   },
   {
-    name: 'Bairros',
-    href: '/admin/neighborhoods',
+    name: 'Zonas de Entrega',
+    href: '/admin/delivery-zones',
     icon: MapPin,
+  },
+  {
+    name: 'Clientes',
+    href: '/admin/customers',
+    icon: Users,
   },
   {
     name: 'Pedidos',
